@@ -5,12 +5,8 @@ from serial.tools.list_ports import comports
 from nicegui import ui
 
 
-def Update_COM_Port_list():
-        values = []
-        for p in (comports()):
-            values.append(p.name)
-        return(values)
 
+        
 class RS232:
     def __init__(self):
 
@@ -19,7 +15,118 @@ class RS232:
         self.Baud = "" #["50", "75", "110", "134", "150", "200", "300", "600", "1200", "1800", "2400", "4800", "9600", "19200", "28800", "38400", "57600", "76800", "115200", "230400", "460800", "576000", "921600"]
         self.Flow = "" #["NONE", "Dsr/Dtr", "Rts/Cts", "Xon/Xoff"]
         self.Parity = "" #["NONE", "ODD", "EVEN"]
-        self.timeout = 1
+        self.Timeout = 1
+
+    def Get_Port(self):
+        return self.Port
+    def Set_Port(self, Port):
+        self.Port = Port
+    def Get_Possible_Ports():
+        Possible_Ports = []
+        for p in (comports()):
+            Possible_Ports.append(p.name)
+        return(Possible_Ports)
+
+    def Get_Baud(self):
+        return self.Baud
+    def Set_Baud(self, Baud):
+        self.Baud = Baud
+    def Get_Possible_Bauds():
+        Possible_Bauds = ["50", "75", "110", "134", "150", "200", "300", "600", "1200", "1800", "2400", "4800", "9600", "19200", "28800", "38400", "57600", "76800", "115200", "230400", "460800", "576000", "921600"]
+        return Possible_Bauds
+
+    def Get_Flow(self):
+        return self.Flow
+    def Set_Flow(self, Flow):
+        self.Flow = Flow
+    def Get_Possible_Flows():
+        Possible_Flows = ["NONE", "Dsr/Dtr", "Rts/Cts", "Xon/Xoff"]
+        return Possible_Flows
+
+    def Get_Parity(self):
+        return self.Parity
+    def Set_Parity(self, Parity):
+        self.Parity = Parity
+    def Get_Possible_Paritys():
+        Possible_Paritys = ["NONE", "ODD", "EVEN"]
+        return Possible_Paritys
+
+    def Get_Timeout(self):
+        return self.Timeout
+    def Set_Timeout(self, Timeout):
+        self.Timeout = Timeout
+
+    def Open(self):
+        Error = None
+        if(self.ser.is_open):
+            Error = "Serial port is already open"
+        else:
+            self.ser.port = '/dev/' + self.Port
+            self.ser.baudrate = self.Baud
+            self.ser.bytesize = serial.EIGHTBITS
+            self.ser.dsrdtr = False
+            self.ser.rtscts = False
+            self.ser.xonxoff = False
+            if(self.Flow.get() == "Dsr/Dtr"):
+                self.ser.dsrdtr = True
+            elif(self.Flow.get() == "Rts/Cts"):
+                self.ser.rtscts = True
+            elif(self.Flow.get() == "Xon/Xoff"):
+                self.ser.xonxoff = True
+            if(self.Parity.get() == "NONE"):
+                self.ser.parity = serial.PARITY_NONE
+            elif(self.Parity.get() == "ODD"):
+                self.ser.parity = serial.PARITY_ODD
+            elif(self.Parity.get() == "EVEN"):
+                self.ser.parity = serial.PARITY_EVEN
+            self.ser.stopbits = serial.STOPBITS_TWO
+            self.ser.timeout = self.Timeout
+            try:
+                self.ser.open()
+            except:
+                Error = "Port: " + '/dev/' + self.Port.get() + " cant be opened!"
+        return Error
+
+    def Close(self):
+        Error = None
+        if(self.ser.is_open):
+            self.ser.close()
+        else:
+            Error = "Port: " + '/dev/' + self.Port.get() + " Cant be closed, was already closed."
+        return Error
+
+    def Write(self, text):
+        Error = None
+        if(self.ser.is_open):
+            try:
+                self.ser.write(text)
+            except:
+                Error = "Port: " + '/dev/' + self.Port.get() + " cant transmit!"
+        else:
+            Error = "Port: " + '/dev/' + self.Port.get() + " cant transmit, because port is not open!"
+        return Error
+
+    def Read(self):
+        Error = None
+        if(self.ser.is_open):
+            try: 
+                Text = self.ser.read()
+            except:
+                Error = "Port: " + '/dev/' + self.Port.get() + " cant recive!"
+        else:
+            Error = "Port: " + '/dev/' + self.Port.get() + " cant recive, because port is not open!"
+        return Error, Text
+
+    def Read_Line(self):
+        Error = None
+        if(self.ser.is_open):
+            try: 
+                Text = self.ser.readline()
+            except:
+                Error = "Port: " + '/dev/' + self.Port.get() + " cant recive!"
+        else:
+            Error = "Port: " + '/dev/' + self.Port.get() + " cant recive, because port is not open!"
+        return Error, Text
 
 
 RS232_1 = RS232()
@@ -30,7 +137,20 @@ RS232_1 = RS232()
 # --------------------------------- GUI ---------------------------------------------------
 
 
+def create_button(name, color, width):
+    return ui.button(name) \
+        .props('unelevated') \
+        .style(f'''
+            background-color: {color} !important;
+            color: white !important;
+            border: 2px solid white !important;
+            border-radius: 0 !important;
 
+            width: {width};
+            height: 45px;
+            font-weight: bold;
+            font-size: 20px !important;
+        ''')
 
 def create_card(title, width='700px', height='220px', content=None, content_varriables=None):
     with ui.card().style(f'''
@@ -274,6 +394,27 @@ def main_page():
                     padding-left: 12px;
                     padding-right: 10px;
                 ''')
+
+            with ui.row().style('gap: 20px;'):
+                with ui.column().style('width: 150px;'):
+
+                    def Connect_pushed():
+                        print("Connect")
+
+                    create_button('CONNECT', '#003366', '140px').on(
+                        'click',
+                        Connect_pushed
+                    )
+
+                with ui.column().style('width: 150px;'):
+                
+                    def Disconnect_pushed():
+                        print("DisConnect")
+
+                    create_button('DISCONNECT', '#003366', '140px').on(
+                        'click',
+                        Disconnect_pushed
+                    )
 
                 
 
