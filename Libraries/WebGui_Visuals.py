@@ -1,6 +1,9 @@
 #Imports for the GUI to work:
 from nicegui import ui
 from datetime import datetime
+#Imports for Grid
+import pandas as pd
+import uuid
 
 Blinkable = []
 Time = datetime.now()
@@ -97,6 +100,72 @@ class Text_input:
                 border: 4px solid {self.border_color} !important;
             ''')
         self.Highlighted = state
+
+
+
+        
+
+def Create_Grid(data, width='700px', height='220px', background_color = "#000000", border_color = "#FFFFFF"):
+
+    grid_id = f"dashboard-grid-{uuid.uuid4().hex}"
+
+    ui.add_head_html(f'''
+    <style>
+        /* Only this specific AG Grid */
+        #{grid_id} .ag-root-wrapper {{
+            background-color: #555555 !important;
+            border-radius: 0 !important;
+            border: none !important;
+        }}
+
+        /* Header */
+        #{grid_id} .ag-header {{
+            background-color: #444444 !important;
+        }}
+
+        #{grid_id} .ag-header-cell {{
+            border-right: 1px solid {border_color} !important;
+        }}
+
+        #{grid_id} .ag-header-cell-text {{
+            color: {border_color} !important;
+            font-size: 20px !important;
+            font-weight: bold !important;
+        }}
+
+        /* Rows */
+        #{grid_id} .ag-row {{
+            background-color: #555555 !important;
+        }}
+
+        #{grid_id} .ag-cell {{
+            color: {border_color} !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            border-right: 1px solid {border_color} !important;
+            border-top: 1px solid {border_color} !important;
+        }}
+
+        /* Remove rounded corners, but ONLY inside this grid */
+        #{grid_id},
+        #{grid_id} * {{
+            border-radius: 0 !important;
+        }}
+    </style>
+    ''')
+
+    return ui.aggrid({
+        'columnDefs': [
+            {'field': col}
+            for col in data.columns
+        ],
+        'rowData': data.to_dict('records'),
+    }).props(f'id="{grid_id}"').style(f'''
+        width: {width};
+        height: {height};
+        border: 2px solid {border_color};
+    ''')
+
         
 
 
@@ -170,9 +239,20 @@ def main_page():
             width='200px',
             height='200px',
             background_color= "#155F2F",
-            border_color = "#FFFFFF",
+            border_color = "#FF0000",
             content=card_content
         )
+
+
+
+
+    
+
+    data = pd.read_csv('/home/peter/Documents/Python/Projects/TestBeam/GUI/data.csv')
+    Create_Grid(data=data, width='700px', height='220px', background_color = "#000000", border_color = "#FC0000")
+    Create_Grid(data=data, width='700px', height='220px', background_color = "#000000", border_color = "#FFFFFF")
+    
+
 
     ui.timer(0.001, Time_update)
     ui.timer(0.1, Blink)
