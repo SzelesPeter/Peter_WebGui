@@ -349,7 +349,7 @@ def Create_Card(title=None, width='700px', height='220px', background_color = "#
                 content()
 
 
-
+"""
 @ui.page('/')
 def main_page():
     # Black page background
@@ -430,3 +430,4 @@ def main_page():
     ui.timer(0.1, Blink)
 
 ui.run()
+"""
