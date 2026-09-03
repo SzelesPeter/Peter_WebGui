@@ -5,6 +5,16 @@ from datetime import datetime
 import pandas as pd
 import uuid
 
+Default_page_color = "#000000"
+Default_background_color = "#403636"
+Default_border_color = "#FFFFFF"
+Default_color = "#B12C2C"
+Default_width = '400px'
+Default_height = '62px'
+Default_box_width = '1000px'
+Default_box_height = '400px'
+Default_font_size = '20px'
+
 Blinkable = []
 Time = datetime.now()
 
@@ -22,7 +32,7 @@ def Blink():
             Element.Highlight(False)
 
 class Button:
-    def __init__(self, name, width, height, background_color, border_color, function_when_pressed):
+    def __init__(self, function_when_pressed, name = '', width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color):
         self.background_color = background_color
         self.border_color = border_color
         self.Highlighted = False
@@ -40,7 +50,7 @@ class Button:
                 width: {width};
                 height: {height};
                 font-weight: bold;
-                font-size: 20px !important;
+                font-size: {font_size} !important;
             ''')
         Blinkable.append(self)
 
@@ -61,7 +71,7 @@ class Button:
 
 
 class Text_input:
-    def __init__(self, width, height, background_color, border_color, default_text = ''):
+    def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_text = ''):
         self.background_color = background_color
         self.border_color = border_color
         self.Highlighted = False
@@ -77,7 +87,7 @@ class Text_input:
 
                 width: {width};
                 height: {height};
-                font-size: 24px;
+                font-size: {font_size};
                 font-weight: bold !important;
                 padding-left: 12px !important;
                 color: {self.border_color} !important;
@@ -101,10 +111,40 @@ class Text_input:
             ''')
         self.Highlighted = state
 
+class Progress_bar:
+    def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
+        self.color = color
+        self.background_color = background_color
+        self.border_color = border_color
+        self.Highlighted = False
+        self.Blinking = False
 
+        self.Progress_bar_element = ui.linear_progress(value=0).props(f'color={self.color}').style(f'''
+            background-color: {self.background_color};
+            width: {width};
+            height: {height};
+            font-weight: bold !important;
+            font-size: {font_size} !important;
+            border: 4px solid {self.border_color};
+        ''')
+
+        Blinkable.append(self)
+
+    def Set_value(self, value):
+        self.Progress_bar_element.set_value(value)
+
+    def Highlight(self, state):
+        if(state):
+            self.Progress_bar_element.set_text_color(self.border_color) #set_text_color sets bar color for some reson!!!
+        else:
+            self.Progress_bar_element.set_text_color(self.color) #set_text_color sets bar color for some reson!!!
+        self.Highlighted = state
+
+def Create_Label(text, font_size = Default_font_size, color = Default_border_color):
+    return ui.label(text).style(f'color: {color}; font-size: {font_size};')
 
 class Number_input:
-    def __init__(self, width, height, background_color, border_color, default_value = 0):
+    def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0):
 
         ui.add_css('''
             input[type=number]::-webkit-inner-spin-button,
@@ -134,11 +174,11 @@ class Number_input:
                 width: 100%;
         
                 background-color: {background_color};
-                border: 3px solid {border_color};
+                border: 4px solid {border_color};
                 border-right: none;
                 border-radius: 0;
         
-                font-size: 24px !important;
+                font-size: {font_size} !important;
                 font-weight: bold !important;
                 color: {border_color} !important;
         
@@ -190,7 +230,7 @@ class Number_input:
                 ''')
 
 
-def Create_Radio_Button(function_to_call, options = [], font_size = '20px', border_color = "#FFFFFF"):
+def Create_Radio_Button(function_to_call, options = [], font_size = Default_font_size, border_color = Default_border_color):
     return ui.radio(
         options=options,
         value=options[0],
@@ -201,7 +241,7 @@ def Create_Radio_Button(function_to_call, options = [], font_size = '20px', bord
         font-weight: bold;
     ''').props('dark')
 
-def Create_Dropdown_Card(function_to_call, options = [], width = '45px', font_size = '20px', background_color = "#000000", border_color = "#FFFFFF"):
+def Create_Dropdown_Card(function_to_call, options = [], width = Default_width, font_size = Default_font_size, color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
     # ---------- DROPDOWN CARD ----------
     ui.add_head_html(f'''
     <style>
@@ -239,15 +279,15 @@ def Create_Dropdown_Card(function_to_call, options = [], width = '45px', font_si
     ).style(f'''
         width: {width};
         background-color: {background_color};
-        color: yellow;
+        color: {color};
         border: 2px solid white;
         border-radius: 0;
-        font-size: 20px;
+        font-size: {font_size};
         font-weight: bold;
     ''').props('outlined dense dark')
 
 
-def Create_Grid(data, width='700px', height='220px', editable = False, header_color = "#254959", background_color = "#2F2F2F", border_color = "#FFFFFF"):
+def Create_Grid(data, width=Default_box_width, height=Default_box_height, editable = False, header_color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
 
     grid_id = f"dashboard-grid-{uuid.uuid4().hex}"
 
@@ -311,7 +351,7 @@ def Create_Grid(data, width='700px', height='220px', editable = False, header_co
     ''')
 
 
-def Create_Card(title=None, width='700px', height='220px', background_color = "#000000", border_color = "#FFFFFF", content=None, content_varriables=None):
+def Create_Card(title=None, width=Default_box_width, height=Default_box_height, background_color = Default_page_color, border_color = Default_border_color, content=None, content_varriables=None):
     with ui.card().style(f'''
         background-color: {background_color};
         border: 3px solid {border_color};
@@ -349,76 +389,53 @@ def Create_Card(title=None, width='700px', height='220px', background_color = "#
                 content()
 
 
-"""
+
 @ui.page('/')
 def main_page():
     # Black page background
-    ui.query('body').style('background-color: black;')
+    ui.query('body').style(f'background-color: {Default_page_color};')
 
-    
+    with ui.row():
+        with ui.column():
 
-    def card_content():
-        def function_when_pressed():
-            print("OWO")
-            B1.Blinking = not(B1.Blinking)
-            B2.Blinking = not(B2.Blinking)
+            def card_content():
+                def function_when_pressed():
+                    print("OWO")
+                    B1.Blinking = not(B1.Blinking)
+                    T2.Blinking = not(T2.Blinking)
+                    P1.Blinking = not(P1.Blinking)
 
-        B1 = Button('OWO', '140px', '40px', "#660000", "#FFFFFF", function_when_pressed)
+                B1 = Button(function_when_pressed, name='Button')
+                T2 = Text_input(default_text='Default text owo')
+                L1 = Create_Label("Did you ever hear the tragedy of Darth Plagueis The Wise? I thought not. It’s not a story the Jedi would tell you. It’s a Sith legend. Darth Plagueis was a Dark Lord of the Sith, so powerful and so wise he could use the Force to influence the midichlorians to create life… He had such a knowledge of the dark side that he could even keep the ones he cared about from dying. The dark side of the Force is a pathway to many abilities some consider to be unnatural. He became so powerful… the only thing he was afraid of was losing his power, which eventually, of course, he did. Unfortunately, he taught his apprentice everything he knew, then his apprentice killed him in his sleep. Ironic. He could save others from death, but not himself.")
 
-        B2 = Text_input('140px', '80px', "#FFF200", "#FFFFFF", 'test')
-        
+            Create_Card(
+                    'Card with TITLE',
+                    content=card_content
+                )
 
-    Create_Card(
-            'Card with TITLE',
-            width='200px',
-            height='200px',
-            border_color = "#FFE600",
-            content=card_content
-        )
+            N1 = Number_input()
+            L2 = Create_Label('The quick brown fox jumps over the lazy dog.')
 
-    Create_Card(
-            width='200px',
-            height='200px',
-            background_color= "#155F2F",
-            border_color = "#FF0000",
-            content=card_content
-        )
+            def nothing(lol):
+                print(lol)
+                pass
+            
+            Create_Radio_Button(function_to_call = nothing, options = ['a', 'b', 'c'])
+            Create_Dropdown_Card(function_to_call = nothing, options = ['a', 'b', 'c'])
+
+        with ui.column():
+
+            data = pd.read_csv('/home/peter/Documents/Python/Projects/TestBeam/GUI/data.csv')
+            Create_Grid(data=data)
+
+            P1 = Progress_bar()
+            P1.Set_value(0.7)
 
 
-    N1 = Number_input('200px', '65px', "#437D78", "#FFFFFF", 1234)
-
-    def nothing(lol):
-        print(lol)
-        pass
-
-    Create_Radio_Button(function_to_call = nothing, options = ['a', 'b', 'c'], font_size = '20px', border_color = "#C71EB6")
-    Create_Dropdown_Card(function_to_call = nothing, options = ['a', 'b', 'c'], width = '300px', font_size = '20px',background_color = "#AA2727", border_color = "#FFFFFF")
-
-    data = pd.read_csv('/home/peter/Documents/Python/Projects/TestBeam/GUI/data.csv')
-    Create_Grid(data=data, width='700px', height='220px', background_color = "#14491D", border_color = "#FC0000")
-    Create_Grid(data=data, width='700px', height='220px', editable = True, background_color = "#292929", border_color = "#FFFFFF")
-
-    # ---------- CLOCK PANEL ----------
-    time_label = ui.label()
-    date_label = ui.label()
-    # Styling
-    time_label.style('''
-        color: #ffff00;
-        font-size: 32px;
-        font-weight: bold;
-        font-family: monospace;
-        margin: 0;
-        padding: 0;
-        text-align: right;
-    ''')
-    date_label.style('''
-        color: white;
-        font-size: 16px;
-        font-family: monospace;
-        margin: 0;
-        padding: 0;
-        text-align: right;
-    ''')
+            # ---------- CLOCK PANEL ----------
+            time_label = Create_Label(text='', font_size='100px', color=Default_color)
+            date_label = Create_Label(text='', font_size='80px')
 
     def Update_clock():
         time_label.set_text(Time.strftime('%H:%M:%S.%f'))
@@ -430,4 +447,3 @@ def main_page():
     ui.timer(0.1, Blink)
 
 ui.run()
-"""

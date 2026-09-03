@@ -56,6 +56,10 @@ class Chart:
         self.traces.pop(name, None)
         self._refresh()
 
+    def remove_all_traces(self):
+        self.traces.clear()
+        self._refresh()
+
     def _refresh(self):
         self.element.options['series'] = list(self.traces.values())
         self.element.update()
@@ -81,6 +85,11 @@ chart.add_trace(
 ui.button(
     'Remove signal 1',
     on_click=lambda: chart.remove_trace('signal 1'),
+)
+
+ui.button(
+    'Remove all',
+    on_click=lambda: chart.remove_all_traces(),
 )
 
 ui.button(
