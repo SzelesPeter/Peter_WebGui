@@ -1,101 +1,140 @@
 from nicegui import ui
-import WebGui_Visuals
+import WebGui_Visuals as WGV
 #For data
 import pandas as pd
 #For custom colored input elements
 import uuid
 # For testing graphs
 from math import sin
-
+import numpy as np
 
 
 class Chart:
-    def __init__(self):
-        self.traces = {}
+    def __init__(self, width=WGV.Default_box_width, height=WGV.Default_box_height, background_color = WGV.Default_page_color, grid_color = WGV.Default_border_color, text_color = WGV.Default_border_color):
 
-        self.element = ui.echart({
+        self.Options = {
+            'legend': {
+                'top': 50,
+                'left': 50,
+            },
             'backgroundColor': 'black',
             'xAxis': {
-                'type': 'category',
-                'axisLine': {'lineStyle': {'color': 'white'}},
-                'splitLine': {
-                    'lineStyle': {
-                        'color': "#626035"
-                    }
-                },
-                'splitLine': {'show': True},
-                'axisLabel': {'show': True},
-                'axisLabel': {'color': 'white'},
+                'type': 'value',
+                'min': '0',
+                'max': '100',
             },
             'yAxis': {
                 'type': 'value',
-                'axisLine': {'lineStyle': {'color': 'white'}},
-                
-                'splitLine': {
-                    'lineStyle': {
-                        'color': "#626035"
-                    }
-                },
-    
-                'axisLabel': {'color': 'white'},
+                'min': '-20',
+                'max': '80',
             },
-            'series': [],
-        })
-
-    def add_trace(self, name, x, y):
-        self.traces[name] = {
-            'name': name,
-            'type': 'line',
-            'data': y,
+            'grid': {
+                'left': 40,
+                'right': 20,
+                'top': 20,
+                'bottom': 40,
+                'containLabel': False,
+            },
+            'series': [{
+                    'name': 'Data',
+                    'type': 'line',
+                    'data': [
+                        [10, 5],
+                        [20, 15],
+                        [40, 10],
+                        [80, 30],
+                    ],
+                    'step': 'end',
+                    'symbol': 'none',
+                },
+                {
+                    'name': 'Data2',
+                    'type': 'line',
+                    'data': [
+                        [10, 15],
+                        [20, 25],
+                        [30, 20],
+                        [40, 40],
+                    ],
+                    'step': 'end',
+                    'symbol': 'none',
+            }],
         }
 
-        self.element.options['xAxis']['data'] = x
-        self._refresh()
+        self.Echart_element = ui.echart(self.Options).style('width: 800px; height: 200px;')
+    def add_trace(self, name, data):
+        self.Echart_element.options['series'].append({
+            'name': name,
+            'type': 'line',
+            'data': data,
+        })
+        self.Echart_element.update()
 
-    def remove_trace(self, name):
-        self.traces.pop(name, None)
-        self._refresh()
+    def remove_trace(self):
+        self.Echart_element.options['series'].pop()
+        self.Echart_element.update()
 
     def remove_all_traces(self):
-        self.traces.clear()
-        self._refresh()
-
-    def _refresh(self):
-        self.element.options['series'] = list(self.traces.values())
-        self.element.update()
+        self.Echart_element.options['series'] = []
+        self.Echart_element.update()
 
 
-chart = Chart()
 
+
+
+
+
+
+
+with ui.column().classes('gap-0 p-0 m-0'): # column with no spaceing
+
+
+
+
+
+
+
+
+
+    chart2 = Chart()
 
 x = list(range(100))
 
-chart.add_trace(
+data1 = []
+data2 = []
+data3 = []
+
+for i in x:
+    data1.append([i, i ])
+    data2.append([i, i * 0.5])
+    data3.append([i, 10*sin(i/10)])
+
+chart2.add_trace(
     'signal 1',
-    x,
-    [i * 0.5 for i in x],
+    data1
 )
 
-chart.add_trace(
+chart2.add_trace(
     'signal 2',
-    x,
-    [i * 0.01 for i in x],
+    data2
 )
 
 ui.button(
     'Remove signal 1',
-    on_click=lambda: chart.remove_trace('signal 1'),
+    on_click=lambda: chart2.remove_trace(),
 )
 
 ui.button(
     'Remove all',
-    on_click=lambda: chart.remove_all_traces(),
+    on_click=lambda: chart2.remove_all_traces(),
 )
 
 ui.button(
     'Add signal 1',
-    on_click=lambda: chart.add_trace('signal 1', list(range(100)), [i * 0.05 for i in list(range(100))]),
+    on_click=lambda: chart2.add_trace('signal 1', data3),
 )
+
+
 
 ui.run()
 
