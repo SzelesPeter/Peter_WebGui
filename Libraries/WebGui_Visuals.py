@@ -351,21 +351,27 @@ def Create_Grid(data, width=Default_box_width, height=Default_box_height, editab
     ''')
 
 
-def Create_Card(title=None, width=Default_box_width, height=Default_box_height, background_color = Default_page_color, border_color = Default_border_color, content=None, content_varriables=None):
-    with ui.card().style(f'''
-        background-color: {background_color};
-        border: 3px solid {border_color};
-        border-radius: 0;
-        width: {width};
-        height: {height};
-        padding: 20px;
-        position: relative;
-        overflow: visible;
-    '''):
+class Card:
+    def __init__(self, name=None, width=Default_box_width, height=Default_box_height, background_color = Default_page_color, border_color = Default_border_color, content_varriables=None):
+        self.Name = name
+        self.Card_element = ui.card().style(f'''
+            background-color: {background_color};
+            border: 3px solid {border_color};
+            border-radius: 0;
+            width: {width};
+            height: {height};
+            padding: 20px;
+            position: relative;
+            overflow: visible;
+        ''')
+
+    def __enter__(self):
+        # Enter the NiceGUI card context
+        self.Card_element.__enter__()
 
         # Card title
-        if(title):
-            ui.label(title).style('''
+        if(self.Name):
+            ui.label(self.Name).style('''
                 position: absolute;
                 top: -16px;
                 left: 16px;
@@ -382,11 +388,18 @@ def Create_Card(title=None, width=Default_box_width, height=Default_box_height, 
                 z-index: 100;
             ''')
 
-        if content:
-            if content_varriables:
-                content(content_varriables)
-            else:
-                content()
+        return self.Card_element
+        
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+         # Leave the NiceGUI card context
+        return self.Card_element.__exit__(
+            exc_type,
+            exc_value,
+            exc_traceback
+        )
+    
+
 
 
 

@@ -7,31 +7,77 @@ import uuid
 # For testing graphs
 from math import sin
 import numpy as np
+import random
 
 
 class Chart:
-    def __init__(self, width=WGV.Default_box_width, height=WGV.Default_box_height, background_color = WGV.Default_page_color, grid_color = WGV.Default_border_color, text_color = WGV.Default_border_color):
+    def __init__(self, name = '', xaxis_name = '', yaxis_name = '', width=WGV.Default_box_width, height=WGV.Default_box_height, background_color = WGV.Default_page_color, grid_color = WGV.Default_background_color, text_color = WGV.Default_border_color):
 
         self.Options = {
+            'animation': False,
+            'title': {
+                'text': name,
+                'top': '0',
+                'left': 'center',
+                'textStyle': {'color': text_color}
+            },
             'legend': {
                 'top': 50,
                 'left': 50,
+                'textStyle': {'color': text_color}
             },
-            'backgroundColor': 'black',
+
+            'tooltip': {
+                'trigger': 'axis',
+                'axisPointer': {
+                    'type': 'cross',
+                },
+            },
+
+            'backgroundColor': background_color,
             'xAxis': {
                 'type': 'value',
-                'min': '0',
-                'max': '100',
+                'name': xaxis_name,
+
+                # Automatic range
+                'max': 'dataMax',
+                'min': 'dataMin',
+
+                'axisLabel': {
+                    'show': True,
+                    'textStyle': {'color': text_color}
+                },
+
+                'axisLine': {'lineStyle': {'color': text_color}},
+
+                'splitLine': {
+                    'show': True,
+                    'lineStyle': {'color': grid_color}
+                },
             },
             'yAxis': {
                 'type': 'value',
-                'min': '-20',
-                'max': '80',
+                'name': yaxis_name,
+
+                'min': 'dataMin',
+                'max': 'dataMax',
+
+                'axisLabel': {
+                    'show': True,
+                    'textStyle': {'color': text_color}
+                },
+
+                'axisLine': {'lineStyle': {'color': text_color}},
+
+                'splitLine': {
+                    'show': True,
+                    'lineStyle': {'color': grid_color}
+                },
             },
             'grid': {
                 'left': 40,
-                'right': 20,
-                'top': 20,
+                'right': 40,
+                'top': 40,
                 'bottom': 40,
                 'containLabel': False,
             },
@@ -61,7 +107,28 @@ class Chart:
             }],
         }
 
-        self.Echart_element = ui.echart(self.Options).style('width: 800px; height: 200px;')
+        self.Echart_element = ui.echart(self.Options).style(f'width: {width}; height: {height};')
+
+    def set_xaxis_range(self, min: int = None, max: int = None):
+        if (min != None):
+            self.Echart_element.options['xAxis']['min'] = str(min)
+        else:
+            self.Echart_element.options['xAxis']['min'] = 'dataMin'
+        if (max != None):
+            self.Echart_element.options['xAxis']['max'] = str(max)
+        else:
+            self.Echart_element.options['xAxis']['max'] = 'dataMax'
+
+    def set_yaxis_range(self, min: int = None, max: int = None):
+        if (min != None):
+            self.Echart_element.options['yAxis']['min'] = str(min)
+        else:
+            self.Echart_element.options['yAxis']['min'] = 'dataMin'
+        if (max != None):
+            self.Echart_element.options['yAxis']['max'] = str(max)
+        else:
+            self.Echart_element.options['yAxis']['max'] = 'dataMax'
+
     def add_trace(self, name, data):
         self.Echart_element.options['series'].append({
             'name': name,
@@ -80,59 +147,60 @@ class Chart:
 
 
 
+counter = 0
 
 
+@ui.page('/')
+def main_page():
+    # Black page background
+    ui.query('body').style(f'background-color: {WGV.Default_page_color};')
+
+    with WGV.Card(name= 'Charts', width='2050px', height='440px'):
+        with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
+            chart1 = Chart(name = 'Chart 1', xaxis_name= 'X', yaxis_name= 'Y')
+            chart2 = Chart(name = 'Chart 2')
 
 
+    
+
+    
+
+    def create_data():
+        data = []
+        x = list(range(100))
+        rand1 = random.randint(1, 50)
+        rand2 = random.randint(1, 50)
+        rand3 = random.randint(-180, 180)
+        for i in x:
+            data.append([i, rand1*sin((i/rand2)+(rand3/100)) + (random.randint(-100, 100)/200)])
+        return data
 
 
-with ui.column().classes('gap-0 p-0 m-0'): # column with no spaceing
+    with ui.row():
+        B1 = WGV.Button(lambda: chart2.set_xaxis_range(-50, 200), name='Set xAxes')
+        B2 = WGV.Button(lambda: chart2.set_yaxis_range(-50, 200), name='Set yAxes')
 
 
+    ui.button(
+        'Remove signal 1',
+        on_click=lambda: chart2.remove_trace(),
+    )
 
+    ui.button(
+        'Remove all',
+        on_click=lambda: chart2.remove_all_traces(),
+    )
 
+    
+    def button_press():
+        global counter
+        chart2.add_trace(str(counter), create_data())
+        counter = counter+1
 
-
-
-
-
-    chart2 = Chart()
-
-x = list(range(100))
-
-data1 = []
-data2 = []
-data3 = []
-
-for i in x:
-    data1.append([i, i ])
-    data2.append([i, i * 0.5])
-    data3.append([i, 10*sin(i/10)])
-
-chart2.add_trace(
-    'signal 1',
-    data1
-)
-
-chart2.add_trace(
-    'signal 2',
-    data2
-)
-
-ui.button(
-    'Remove signal 1',
-    on_click=lambda: chart2.remove_trace(),
-)
-
-ui.button(
-    'Remove all',
-    on_click=lambda: chart2.remove_all_traces(),
-)
-
-ui.button(
-    'Add signal 1',
-    on_click=lambda: chart2.add_trace('signal 1', data3),
-)
+    ui.button(
+        'Add signal 1',
+        on_click=lambda: button_press(),
+    )
 
 
 
