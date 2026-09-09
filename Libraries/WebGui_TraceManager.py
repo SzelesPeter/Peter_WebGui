@@ -81,30 +81,7 @@ class Chart:
                 'bottom': 40,
                 'containLabel': False,
             },
-            'series': [{
-                    'name': 'Data',
-                    'type': 'line',
-                    'data': [
-                        [10, 5],
-                        [20, 15],
-                        [40, 10],
-                        [80, 30],
-                    ],
-                    'step': 'end',
-                    'symbol': 'none',
-                },
-                {
-                    'name': 'Data2',
-                    'type': 'line',
-                    'data': [
-                        [10, 15],
-                        [20, 25],
-                        [30, 20],
-                        [40, 40],
-                    ],
-                    'step': 'end',
-                    'symbol': 'none',
-            }],
+            'series': [],
         }
 
         self.Echart_element = ui.echart(self.Options).style(f'width: {width}; height: {height};')
@@ -129,13 +106,49 @@ class Chart:
         else:
             self.Echart_element.options['yAxis']['max'] = 'dataMax'
 
-    def add_trace(self, name, data):
-        self.Echart_element.options['series'].append({
-            'name': name,
-            'type': 'line',
-            'data': data,
-        })
+    def add_analog_trace(self, name, data):
+        exists = False
+        for trace in self.Echart_element.options['series']:
+            if trace['name'] == name:
+                self.Echart_element.options['series'].remove(trace)
+                self.Echart_element.options['series'].append({
+                    'name': name,
+                    'type': 'line',
+                    'data': data,
+                })
+                exists = True
+        if exists == False:
+            self.Echart_element.options['series'].append({
+                'name': name,
+                'type': 'line',
+                'data': data,
+            })
         self.Echart_element.update()
+        return exists
+
+    def add_digital_trace(self, name, data):
+        exists = False
+        for trace in self.Echart_element.options['series']:
+            if trace['name'] == name:
+                self.Echart_element.options['series'].remove(trace)
+                self.Echart_element.options['series'].append({
+                    'name': name,
+                    'type': 'line',
+                    'data': data,
+                    'step': 'end',
+                    'symbol': 'none',
+                })
+                exists = True
+        if exists == False:
+            self.Echart_element.options['series'].append({
+                'name': name,
+                'type': 'line',
+                'data': data,
+                'step': 'end',
+                'symbol': 'none',
+            })
+        self.Echart_element.update()
+        return exists
 
     def remove_trace(self):
         self.Echart_element.options['series'].pop()
@@ -175,32 +188,36 @@ def main_page():
             data.append([i, rand1*sin((i/rand2)+(rand3/100)) + (random.randint(-100, 100)/200)])
         return data
 
+    def create_digital_data():
+            data = []
+            x = list(range(10))
+            for i in x:
+                data.append([i, random.randint(0, 1)])
+            return data
 
+    
+    L1 = WGV.Create_Label('Chart1')
+    with ui.row():
+        B3 = WGV.Button(lambda: chart1.remove_all_traces(), name='Remove all')
+        B5 = WGV.Button(lambda: chart1.add_digital_trace('Same', create_digital_data()), name='Same random')
+
+
+    L2 = WGV.Create_Label('Chart2')
     with ui.row():
         B1 = WGV.Button(lambda: chart2.set_xaxis_range(-50, 200), name='Set xAxes')
         B2 = WGV.Button(lambda: chart2.set_yaxis_range(-50, 200), name='Set yAxes')
 
+    with ui.row():
+        B3 = WGV.Button(lambda: chart2.remove_all_traces(), name='Remove all')
+        B4 = WGV.Button(lambda: button_press(), name='New random')
+        B5 = WGV.Button(lambda: chart2.add_analog_trace('Same', create_data()), name='Same random')
+        B6 = WGV.Button(lambda: chart2.set_yaxis_range(-50, 200), name='Set yAxes')
 
-    ui.button(
-        'Remove signal 1',
-        on_click=lambda: chart2.remove_trace(),
-    )
-
-    ui.button(
-        'Remove all',
-        on_click=lambda: chart2.remove_all_traces(),
-    )
-
-    
     def button_press():
         global counter
-        chart2.add_trace(str(counter), create_data())
+        chart2.add_analog_trace(str(counter), create_data())
         counter = counter+1
 
-    ui.button(
-        'Add signal 1',
-        on_click=lambda: button_press(),
-    )
 
 
 
