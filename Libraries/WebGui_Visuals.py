@@ -141,7 +141,7 @@ class Progress_bar:
         self.Highlighted = state
 
 def Create_Label(text, font_size = Default_font_size, color = Default_border_color):
-    return ui.label(text).style(f'color: {color}; font-size: {font_size};')
+    return ui.label(text).style(f'color: {color} !important; font-size: {font_size} !important;')
 
 class Number_input:
     def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0):

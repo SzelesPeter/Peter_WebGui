@@ -181,7 +181,7 @@ class Chart:
             self.Echart_element.update()
 
 
-
+"""
 counter = 0
 
 
@@ -265,116 +265,8 @@ def main_page():
 
 ui.run()
 
-
-
-
-
-
-
-
 """
 
-# ---------- TEST CARD ----------
-def test_card_content():
-
-    points = 120
-    phase = 0
-
-    x = list(range(points))
-
-    chart = ui.echart({
-        'backgroundColor': 'black',
-
-        'animation': False,
-
-        'xAxis': {
-            'type': 'category',
-            'data': x,
-            'axisLine': {'lineStyle': {'color': 'white'}},
-            'splitLine': {'show': False},
-            'axisLabel': {'show': False},
-        },
-
-        'yAxis': {
-            'type': 'value',
-            'min': -1.5,
-            'max': 1.5,
-
-            'axisLine': {'lineStyle': {'color': 'white'}},
-
-            'splitLine': {
-                'lineStyle': {
-                    'color': '#333333'
-                }
-            },
-
-            'axisLabel': {'color': 'white'},
-        },
-
-        'legend': {
-            'textStyle': {
-                'color': 'white'
-            }
-        },
-
-        'series': [
-            {
-                'name': 'Wave 1',
-                'type': 'line',
-                'data': [],
-                'smooth': True,
-                'showSymbol': False,
-
-                'lineStyle': {
-                    'width': 3,
-                    'color': '#ffff00'
-                },
-            },
-            {
-                'name': 'Wave 2',
-                'type': 'line',
-                'data': [],
-                'smooth': True,
-                'showSymbol': False,
-
-                'lineStyle': {
-                    'width': 3,
-                    'color': '#3399ff'
-                },
-            }
-        ]
-    }).style('width: 100%; height: 100%; margin-top: 10px;')
-
-    def update_chart():
-        nonlocal phase
-
-        y1 = [sin(i * 0.15 + phase) for i in x]
-        y2 = [0.7 * sin(i * 0.15 + phase + 1.8) for i in x]
-
-        chart.options['series'][0]['data'] = y1
-        chart.options['series'][1]['data'] = y2
-
-        chart.update()
-
-        phase += 0.15
-
-    update_chart()
-
-    # Update every 50 ms
-    ui.timer(0.05, update_chart)
 
 
 
-@ui.page('/')
-def main_page():
-    # Black page background
-    ui.query('body').style('background-color: black;')
-
-    WebGui_Visuals.Create_Card(
-        'TEST',
-        width='700px',
-        height='420px',
-        content=test_card_content
-    )
-ui.run()
-"""
