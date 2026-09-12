@@ -106,57 +106,79 @@ class Chart:
         else:
             self.Echart_element.options['yAxis']['max'] = 'dataMax'
 
-    def add_analog_trace(self, name, data):
+    def add_trace(self, name, data, digital = False, color = None, lineWidth = 1, symbolsize = 0, symbol = 'circle', showLabel = False, fillArea = False):
         exists = False
-        for trace in self.Echart_element.options['series']:
-            if trace['name'] == name:
-                self.Echart_element.options['series'].remove(trace)
-                self.Echart_element.options['series'].append({
+        settings = {
                     'name': name,
                     'type': 'line',
                     'data': data,
-                })
-                exists = True
-        if exists == False:
-            self.Echart_element.options['series'].append({
-                'name': name,
-                'type': 'line',
-                'data': data,
-            })
-        self.Echart_element.update()
-        return exists
-
-    def add_digital_trace(self, name, data):
-        exists = False
+                    'lineStyle': {
+                        'width': lineWidth,
+                    },
+                    'symbol': symbol,
+                    'symbolSize': symbolsize,
+                    'showSymbol': True,
+                    'label': {
+                        'show': showLabel,
+                    },
+                }
+        if fillArea:
+            settings['areaStyle'] = {}
+        if color != None:
+            settings['lineStyle']['color'] = color
+            settings['itemStyle'] = {}
+            settings['itemStyle']['color'] = color
+        if digital:
+            settings['step'] = 'end'
+             
+        
         for trace in self.Echart_element.options['series']:
             if trace['name'] == name:
                 self.Echart_element.options['series'].remove(trace)
-                self.Echart_element.options['series'].append({
-                    'name': name,
-                    'type': 'line',
-                    'data': data,
-                    'step': 'end',
-                    'symbol': 'none',
-                })
+                self.Echart_element.options['series'].append(settings)
                 exists = True
         if exists == False:
-            self.Echart_element.options['series'].append({
-                'name': name,
-                'type': 'line',
-                'data': data,
-                'step': 'end',
-                'symbol': 'none',
-            })
+            self.Echart_element.options['series'].append(settings)
         self.Echart_element.update()
         return exists
 
-    def remove_trace(self):
-        self.Echart_element.options['series'].pop()
-        self.Echart_element.update()
+
+
+    def remove_trace(self, name):
+        if name != 'no trace found':
+            for trace in self.Echart_element.options['series']:
+                        if trace['name'] == name:
+                            self.Echart_element.options['series'].remove(trace)
+            self.Echart_element.update()
 
     def remove_all_traces(self):
         self.Echart_element.options['series'] = []
         self.Echart_element.update()
+
+    def get_trace_names(self):
+        names = []
+        for trace in self.Echart_element.options['series']:
+            names.append(trace['name'])
+        if names == []:
+            return ['no trace found']
+        else:
+            return names
+
+    def move_trace_x(self, name, value):
+        if name != 'no trace found':
+            for trace in self.Echart_element.options['series']:
+                        if trace['name'] == name:
+                            for point in trace['data']:
+                                point[1] = point[1] + value
+            self.Echart_element.update()
+
+    def move_trace_y(self, name, value):
+        if name != 'no trace found':
+            for trace in self.Echart_element.options['series']:
+                        if trace['name'] == name:
+                            for point in trace['data']:
+                                point[0] = point[0] + value
+            self.Echart_element.update()
 
 
 
@@ -199,7 +221,7 @@ def main_page():
     L1 = WGV.Create_Label('Chart1')
     with ui.row():
         B3 = WGV.Button(lambda: chart1.remove_all_traces(), name='Remove all')
-        B5 = WGV.Button(lambda: chart1.add_digital_trace('Same', create_digital_data()), name='Same random')
+        B5 = WGV.Button(lambda: chart1.add_trace('Same', create_digital_data(), digital= True), name='Same random')
 
 
     L2 = WGV.Create_Label('Chart2')
@@ -210,13 +232,33 @@ def main_page():
     with ui.row():
         B3 = WGV.Button(lambda: chart2.remove_all_traces(), name='Remove all')
         B4 = WGV.Button(lambda: button_press(), name='New random')
-        B5 = WGV.Button(lambda: chart2.add_analog_trace('Same', create_data()), name='Same random')
+        B5 = WGV.Button(lambda: chart2.add_trace('Same', create_data()), name='Same random')
         B6 = WGV.Button(lambda: chart2.set_yaxis_range(-50, 200), name='Set yAxes')
+        def D1_funct(name):
+            chart2.remove_trace(name)
+            D1.set_options(chart2.get_trace_names())
+            D2.set_options(chart2.get_trace_names())
+        D1 = WGV.Create_Dropdown_Card(function_to_call = D1_funct, options = chart2.get_trace_names())
+
+    with ui.row():
+        selected_trace = chart2.get_trace_names()[0]
+        def D2_funct(name):
+            selected_trace = name
+            L3.set_text(selected_trace)
+        D2 = WGV.Create_Dropdown_Card(function_to_call = D2_funct, options = chart2.get_trace_names())
+        L3 = WGV.Create_Label(selected_trace, '30px')
+        N1 =  WGV.Number_input()
+        B7 = WGV.Button(lambda: chart2.move_trace_x(D2.value, N1.Number_input_element.value), name='Move trace X')
+        N2 =  WGV.Number_input()
+        B8 = WGV.Button(lambda: chart2.move_trace_y(D2.value, N2.Number_input_element.value), name='Move trace Y')
 
     def button_press():
         global counter
-        chart2.add_analog_trace(str(counter), create_data())
+        chart2.add_trace(str(counter), create_data())
         counter = counter+1
+        D1.set_options(chart2.get_trace_names())
+        D2.set_options(chart2.get_trace_names())
+
 
 
 

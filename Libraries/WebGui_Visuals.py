@@ -9,11 +9,11 @@ Default_page_color = "#000000"
 Default_background_color = "#403636"
 Default_border_color = "#FFFFFF"
 Default_color = "#B12C2C"
-Default_width = '400px'
-Default_height = '62px'
+Default_width = '200px'
+Default_height = '44px'
 Default_box_width = '1000px'
 Default_box_height = '400px'
-Default_font_size = '20px'
+Default_font_size = '16px'
 
 Blinkable = []
 Time = datetime.now()
@@ -44,7 +44,7 @@ class Button:
             .style(f'''
                 background-color: {self.background_color} !important;
                 color: {self.border_color} !important;
-                border: 4px solid {self.border_color} !important;
+                border: 2px solid {self.border_color} !important;
                 border-radius: 0 !important;
 
                 width: {width};
@@ -157,6 +157,9 @@ class Number_input:
                 -moz-appearance: textfield !important;
                 appearance: textfield !important;
             }
+            .q-field__native {
+                transform: translateY(-5px);
+            }
         ''')
 
         
@@ -174,7 +177,7 @@ class Number_input:
                 width: 100%;
         
                 background-color: {background_color};
-                border: 4px solid {border_color};
+                border: 2px solid {border_color};
                 border-right: none;
                 border-radius: 0;
         
@@ -183,6 +186,7 @@ class Number_input:
                 color: {border_color} !important;
         
                 padding-left: 12px;
+                
             ''')
 
             self.Number_input_element.set_value(default_value)
@@ -194,7 +198,7 @@ class Number_input:
             '''):
         
                 ui.button(
-                    icon='keyboard_arrow_up',
+                    text='▲',
                     on_click=lambda: self.Number_input_element.set_value(
                         (self.Number_input_element.value or 0) + 1
                     )
@@ -204,15 +208,14 @@ class Number_input:
                     min-height: 0;
         
                     background-color: {background_color};
-                    color: {border_color};
-        
-                    border: 3px solid {border_color};
+                    color: {border_color} !important;
+                    border: 2px solid {border_color};
                     border-bottom: 2px solid {border_color};
                     border-radius: 0;
                 ''')
         
                 ui.button(
-                    icon='keyboard_arrow_down',
+                    text = '▼',
                     on_click=lambda: self.Number_input_element.set_value(
                         (self.Number_input_element.value or 0) - 1
                     )
@@ -222,9 +225,8 @@ class Number_input:
                     min-height: 0;
         
                     background-color: {background_color};
-                    color: {border_color};
-        
-                    border: 3px solid {border_color};
+                    color: {border_color} !important;
+                    border: 2px solid {border_color};
                     border-top: 2px solid {border_color};
                     border-radius: 0;
                 ''')
@@ -272,7 +274,7 @@ def Create_Dropdown_Card(function_to_call, options = [], width = Default_width, 
     </style>
     ''')
 
-    ui.select(
+    return ui.select(
         options=options,
         value=options[0],
         on_change=lambda e: function_to_call(e.value)
