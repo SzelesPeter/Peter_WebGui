@@ -1,4 +1,6 @@
-
+import sys, os
+Peter_WebGui_Path = os.path.dirname(sys.path[0])
+sys.path.append(os.path.join(Peter_WebGui_Path, 'Libraries'))
 
 from nicegui import ui
 import WebGui_Visuals as WGV
