@@ -37,12 +37,14 @@ call in_message_target_function_list.pop(message_in)        Generate_report(out_
 
 import Time
 
+def Default_Function(data):
+    pass
+
 class Communicator:
-    def __init__(self, message_out_function, message_line_in_function, max_number_of_messages_out = 1, default_message_in_target_function = None, generate_log_function = None):
+    def __init__(self, message_out_function, message_line_in_function, max_number_of_messages_out = 1, generate_log_function = None):
         self.message_out_function = message_out_function
         self.message_line_in_function = message_line_in_function
         self.max_number_of_messages_out = max_number_of_messages_out
-        self.default_message_in_target_function = default_message_in_target_function
         self.generate_log_function = generate_log_function
         self.message_out_list = []
         self.message_out_sent_list = []
@@ -50,7 +52,7 @@ class Communicator:
         self.message_in_target_function_list = []
         self.number_of_messages_out = 0
 
-    def Message_out_request(self, message_out, in_message_target_function):
+    def Message_out_request(self, message_out, in_message_target_function = Default_Function):
         self.message_out_list.append(message_out)
         self.message_out_sent_list.append(message_out)
         self.message_out_time_list.append(Time.Get_Time_text())
@@ -71,12 +73,15 @@ class Communicator:
                 if (len(self.message_out_sent_list) != 0) and (len(self.message_out_time_list) != 0):
                     self.generate_log_function(self.message_out_sent_list.pop(), self.message_out_time_list.pop(), message_in, Time.Get_Time_text())
                 else:
-                    self.generate_log_function('None', 'None', message_in, Time.Get_Time_text())
+                    self.generate_log_function('', '', message_in, Time.Get_Time_text())
             if len(self.message_in_target_function_list) != 0:
                 self.message_in_target_function_list.pop()(message_in)
-            else:
-                if self.default_message_in_target_function != None:
-                    self.default_message_in_target_function(message_in)
+        else:
+            if len(self.message_in_target_function_list) != 0:
+                if self.message_in_target_function_list[-1] == None:
+                    self.message_in_target_function_list.pop()
+                    if self.generate_log_function != None:
+                        self.generate_log_function(self.message_out_sent_list.pop(), self.message_out_time_list.pop(), '', '')
 
 
     

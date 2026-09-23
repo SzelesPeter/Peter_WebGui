@@ -9,7 +9,7 @@ Default_page_color = "#000000"
 Default_background_color = "#403636"
 Default_border_color = "#FFFFFF"
 Default_color = "#B12C2C"
-Default_width = '200px'
+Default_width = '100px'
 Default_height = '44px'
 Default_box_width = '1000px'
 Default_box_height = '400px'
@@ -44,7 +44,7 @@ class Button:
             .style(f'''
                 background-color: {self.background_color} !important;
                 color: {self.border_color} !important;
-                border: 2px solid {self.border_color} !important;
+                border: 3px solid {self.border_color} !important;
                 border-radius: 0 !important;
 
                 width: {width};
@@ -70,6 +70,7 @@ class Button:
         self.Highlighted = state
 
 
+
 class Text_input:
     def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_text = ''):
         self.background_color = background_color
@@ -82,14 +83,15 @@ class Text_input:
             .style(f'''
                 background-color: {self.background_color} !important;
                 color: {self.border_color} !important;
-                border: 4px solid {self.border_color} !important;
+                border: 3px solid {self.border_color} !important;
                 border-radius: 0 !important;
 
                 width: {width};
-                height: {height};
-                font-size: {font_size};
+                padding: 0 14px !important;
+                height: {height} !important;
+                line-height: {height} !important;
+                font-size: {font_size} !important;
                 font-weight: bold !important;
-                padding-left: 12px !important;
                 color: {self.border_color} !important;
             ''')
         
@@ -101,13 +103,13 @@ class Text_input:
             self.Text_input_element.style(f'''
                 background-color: {self.border_color} !important;
                 color: {self.background_color} !important;
-                border: 4px solid {self.background_color} !important;
+                border: 3px solid {self.background_color} !important;
             ''')
         else:
             self.Text_input_element.style(f'''
                 background-color: {self.background_color} !important;
                 color: {self.border_color} !important;
-                border: 4px solid {self.border_color} !important;
+                border: 3px solid {self.border_color} !important;
             ''')
         self.Highlighted = state
 
@@ -140,8 +142,29 @@ class Progress_bar:
             self.Progress_bar_element.set_text_color(self.color) #set_text_color sets bar color for some reson!!!
         self.Highlighted = state
 
-def Create_Label(text, font_size = Default_font_size, color = Default_border_color):
-    return ui.label(text).style(f'color: {color} !important; font-size: {font_size} !important;')
+def Create_Label_Left(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color):
+    return ui.label(text).classes('w-full h-full flex items-center').style(f'''
+        color: {color} !important;
+        font-size: {font_size} !important;
+        width: {width};
+        height: {height};
+    ''')
+
+def Create_Label_Right(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color):
+    return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
+        color: {color} !important;
+        font-size: {font_size} !important;
+        width: {width};
+        height: {height};
+    ''')
+
+def Create_Label_Center(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color):
+    return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
+        color: {color} !important;
+        font-size: {font_size} !important;
+        width: {width};
+        height: {height};
+    ''')
 
 class Number_input:
     def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0):
