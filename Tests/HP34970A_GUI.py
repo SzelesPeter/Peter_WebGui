@@ -1,6 +1,9 @@
 import sys, os
 Peter_WebGui_Path = os.path.dirname(sys.path[0])
 sys.path.append(os.path.join(Peter_WebGui_Path, 'Libraries'))
+sys.path.append(os.path.join(os.path.join(Peter_WebGui_Path, 'Libraries'), 'Agilent drivers'))
+
+import Agilent_34970A
 
 from nicegui import ui
 import WebGui_Visuals as WGV
@@ -27,6 +30,7 @@ def G10_Add_New_Line(time_request, time_out, data_out, time_in, data_in, message
     df.loc[len(df)] = [time_request, time_out, data_out, time_in, data_in, messages_out]
     G10.options['rowData'] = df.to_dict('records')
 
+Instrument_1 = Agilent_34970A.Instrument()
 Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Line, message_line_in_function=RS232_1.Read_Line, max_number_of_messages_out= 2, generate_log_function= G10_Add_New_Line)
 
 
@@ -35,6 +39,16 @@ Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Li
 def main_page():
     # Black page background
     ui.query('body').style(f'background-color: {WGV.Default_page_color};')
+
+
+    with WGV.Card(name= 'Test', width= '1000px', height= '400px'):
+        L_Test = WGV.Create_Label_Left('Not Tested', font_size= '20px', width = '200px')
+        def B_Test_Function():
+            Communicator_1.Message_out_request(message_out='MEASure:VOLTage:DC? (@101)', in_message_target_function = L_Test.set_text)
+        B_Test = WGV.Button(lambda: B_Test_Function(), name='Test', width= '120px')
+
+
+
 
     with WGV.Card(name= 'COM Port', width= '301px', height= '400px'):
         with ui.row(): # column with no spaceing:
