@@ -46,27 +46,31 @@ class Communicator:
         self.message_line_in_function = message_line_in_function
         self.max_number_of_messages_out = max_number_of_messages_out
         self.generate_log_function = generate_log_function
-        self.message_out_list = []
+        self.message_out_request_list = []
         self.message_timeout_list = []
         self.message_out_sent_list = []
         self.message_out_request_time_list = []
         self.message_out_time_list = []
+        self.message_in_target_function_request_list = []
         self.message_in_target_function_list = []
         self.number_of_messages_out = 0
 
     def Message_out_request(self, message_out, in_message_target_function = Default_Function, timeout = 1000):
-        self.message_out_list.append(message_out)
+        self.message_out_request_list.append(message_out)
         self.message_out_request_time_list.append(Time.Get_Time_text())
-        self.message_in_target_function_list.append(in_message_target_function)
+        self.message_in_target_function_request_list.append(in_message_target_function)
+        print(in_message_target_function)
         self.message_timeout_list.append(timeout)
 
     def Message_out_worker(self):
         if self.number_of_messages_out < self.max_number_of_messages_out:
-            if len(self.message_out_list) != 0:
-                message_out = self.message_out_list.pop()
+            if len(self.message_out_request_list) != 0:
+                message_out = self.message_out_request_list.pop(0)
+                print(message_out)
                 self.message_out_function(message_out)
                 self.message_out_sent_list.append(message_out)
                 self.message_out_time_list.append(Time.Get_Time_text())
+                self.message_in_target_function_list.append(self.message_in_target_function_request_list.pop(0))
                 self.number_of_messages_out = self.number_of_messages_out +1
 
     def Message_in_worker(self):
@@ -76,18 +80,21 @@ class Communicator:
                 self.number_of_messages_out = self.number_of_messages_out -1
             if self.generate_log_function != None:
                 if (len(self.message_out_sent_list) != 0) and (len(self.message_out_time_list) != 0):
-                    self.generate_log_function(self.message_out_request_time_list.pop(), self.message_out_time_list.pop(), self.message_out_sent_list.pop(),Time.Get_Time_text(), message_in, self.number_of_messages_out)
+                    self.generate_log_function(self.message_out_request_time_list.pop(0), self.message_out_time_list.pop(0), self.message_out_sent_list.pop(0),Time.Get_Time_text(), message_in, self.number_of_messages_out)
                 else:
                     self.generate_log_function('', '', '', message_in, Time.Get_Time_text(), self.number_of_messages_out)
             if len(self.message_in_target_function_list) != 0:
-                self.message_in_target_function_list.pop()(message_in)
+                function = self.message_in_target_function_list.pop(0)
+                function(message_in)
         else:
             if len(self.message_in_target_function_list) != 0:
-                if self.message_in_target_function_list[-1] == None:
-                    self.message_in_target_function_list.pop()
-                    if self.generate_log_function != None:
-                        self.generate_log_function(self.message_out_request_time_list.pop(), self.message_out_time_list.pop(), self.message_out_sent_list.pop(), '', '', self.number_of_messages_out)
-
+                if self.number_of_messages_out > 0:
+                    if self.message_in_target_function_list[-1] == None:
+                        self.message_in_target_function_list.pop(0)
+                        self.number_of_messages_out = self.number_of_messages_out -1 
+                        if self.generate_log_function != None:
+                            self.generate_log_function(self.message_out_request_time_list.pop(0), self.message_out_time_list.pop(0), self.message_out_sent_list.pop(0), '', '', self.number_of_messages_out)
+        
 
     
 

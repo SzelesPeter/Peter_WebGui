@@ -297,10 +297,10 @@ def Create_Dropdown_Card(function_to_call, options = [], width = Default_width, 
     </style>
     ''')
 
-    return ui.select(
+    element = ui.select(
         options=options,
         value=options[0],
-        on_change=lambda e: function_to_call(e.value)
+        on_change=lambda e: function_to_call(e.value),
     ).style(f'''
         width: {width};
         background-color: {background_color};
@@ -310,6 +310,10 @@ def Create_Dropdown_Card(function_to_call, options = [], width = Default_width, 
         font-size: {font_size};
         font-weight: bold;
     ''').props('outlined dense dark')
+
+    element.on('click', element.update)
+
+    return element
 
 
 def Create_Grid(data, width=Default_box_width, height=Default_box_height, editable = False, header_color = Default_color, background_color = Default_background_color, border_color = Default_border_color):

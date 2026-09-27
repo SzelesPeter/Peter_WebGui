@@ -7,6 +7,7 @@ import Agilent_34970A
 
 from nicegui import ui
 import WebGui_Visuals as WGV
+import time
 import Time
 import Communicator
 import RS232
@@ -30,10 +31,9 @@ def G10_Add_New_Line(time_request, time_out, data_out, time_in, data_in, message
     df.loc[len(df)] = [time_request, time_out, data_out, time_in, data_in, messages_out]
     G10.options['rowData'] = df.to_dict('records')
 
-Instrument_1 = Agilent_34970A.Instrument()
+
 Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Line, message_line_in_function=RS232_1.Read_Line, max_number_of_messages_out= 2, generate_log_function= G10_Add_New_Line)
-
-
+Instrument_1 = Agilent_34970A.Instrument(Communicator_1)
 
 @ui.page('/')
 def main_page():
@@ -43,10 +43,25 @@ def main_page():
 
     with WGV.Card(name= 'Test', width= '1000px', height= '400px'):
         L_Test = WGV.Create_Label_Left('Not Tested', font_size= '20px', width = '200px')
+        global Running
+        Running = False
+        def Reading_value(text):
+            global Running
+            L_Test.set_text(text)
+            if Running:
+                Instrument_1.Monitor_Read_Resoult(Reading_value)
         def B_Test_Function():
-            Communicator_1.Message_out_request(message_out='MEASure:VOLTage:DC? (@101)', in_message_target_function = L_Test.set_text)
+            global Running
+            print(L_Test.set_text)
+            Instrument_1.Configure_Chanels(measurement = 'VOLTage_DC',chanels =  ['102'])
+            Instrument_1.Monitor_Start(['102'])
+            Running = True
+            Reading_value('Waiting')
+        def B_Stop_Function():
+            global Running
+            Running = False
         B_Test = WGV.Button(lambda: B_Test_Function(), name='Test', width= '120px')
-
+        B_Stop = WGV.Button(lambda: B_Stop_Function(), name='Stop', width= '120px')
 
 
 
@@ -99,8 +114,8 @@ def main_page():
 
     
         
-    ui.timer(0.001, Communicator_1.Message_in_worker)
-    ui.timer(0.001, Communicator_1.Message_out_worker)
+    ui.timer(0.1, Communicator_1.Message_in_worker)
+    ui.timer(0.1, Communicator_1.Message_out_worker)
 
 
 ui.run()

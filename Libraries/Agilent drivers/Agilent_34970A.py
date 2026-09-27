@@ -1,3 +1,8 @@
+import sys, os
+Peter_WebGui_Path = os.path.dirname(sys.path[0])
+sys.path.append(os.path.join(os.path.join(Peter_WebGui_Path, 'Libraries'), 'Agilent drivers'))
+import Agilent_34970A
+
 
 class SCPI_Message:
     def __init__(self, Instrument, Command):
@@ -5,15 +10,10 @@ class SCPI_Message:
         self.Command = Command
 
     def __Send_Command(self, Text):
-        print('OUT => ' + Text)
-        self.Instrument.Interface.Command(Text)
-        time.sleep(0.01)
+        self.Instrument.Interface.Message_out_request(message_out=Text, in_message_target_function = None)
 
-    def __Send_Query(self, Text):
-        print('OUT => ' + Text)
-        tmp = self.Instrument.Interface.Query(Text)
-        print('IN <= ' + str(tmp))
-        return (tmp)
+    def __Send_Query(self, Text, Target_Function):
+        self.Instrument.Interface.Message_out_request(message_out=Text, in_message_target_function = Target_Function)
 
     def Set(self):
         self.__Send_Command(self.Command + ' ON')
@@ -30,16 +30,25 @@ class SCPI_Message:
                 Message = Message + ',' + variable
         self.__Send_Command(Message)
 
-    def Read_Bytes(self, *variables):
+    def Read(self, Target_Function, *variables):
+        Message = self.Command + '?'
+        for i, variable in enumerate(variables):
+            if (0 == i):
+                Message = Message + ' ' + variable
+            else:
+                Message = Message + ',' + variable 
+        self.__Send_Query(Message, Target_Function)
+    """
+    def Read_Bytes(self, *variables, Target_Function):
         Message = self.Command + '?'
         for i, variable in enumerate(variables):
             if (0 == i):
                 Message = Message + ' ' + variable
             else:
                 Message = Message + ',' + variable       
-        return (self.__Send_Query(Message))
+        self.__Send_Query(Message, Target_Function)
 
-    def Read_Bits(self, lenght, *variables):
+    def Read_Bits(self, *variables, Target_Function):
         Message = self.Command + '?'
         for i, variable in enumerate(variables):
             if (0 == i):
@@ -75,10 +84,11 @@ class SCPI_Message:
     
     def Read_Array_From_Block(self, *variables):  
         return (self.Read_Block(*variables).split(','))
+    """
     
 
 class Instrument:
-    def __init__(self, Interface = None):
+    def __init__(self, Interface):
         self.Interface = Interface
 
         # Measurement Commands
@@ -175,7 +185,9 @@ class Instrument:
         self.SENSe_RESistance_RANGe = SCPI_Message(self, 'SENSe:RESistance:RANGe') # {<range>|MIN|MAX}[,(@<ch_list>)]
         self.SENSe_RESistance_RANGe_AUTO = SCPI_Message(self, 'SENSe:RESistance:RANGe:AUTO') # {OFF|ON}[,(@<ch_list>)]
         self.SENSe_RESistance_RESolution = SCPI_Message(self, 'SENSe:RESistance:RESolution') # {<resolution>|MIN|MAX}[,(@<ch_list>)]
-        self.SENSe_RESistance_APERture = SCPI_Message(self, 'SENSe:RESistance:APERture') # {<time>|MIN|MAX}[,(@ <ch_list>)]
+        self.SENSe_RESistance_ent_DC_NPLC = SCPI_Message(self, 'SENSe:CURRent:DC:APERture') # {0.02|0.2| 1 |2|10|20|100|200|MIN|MAX}[,( @ < ch_list>)]
+        self.CONFigure_CURRent_AC = SCPI_Message(self, 'CONFigure:CURRent:AC') # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],] (@ <scan_list>)
+        self.SENSe_CURReAPERture = SCPI_Message(self, 'SENSe:RESistance:APERture') # {<time>|MIN|MAX}[,(@ <ch_list>)]
         self.SENSe_RESistance_NPLC = SCPI_Message(self, 'SENSe:RESistance:APERture') # {0.02|0.2| 1 |2|10|20|100|200|MIN|MAX}[,( @ < ch_list>)]
         self.SENSe_RESistance_OCOMpensated = SCPI_Message(self, 'SENSe:RESistance:OCOMpensated') # {OFF|ON}[,(@<ch_list>)]
         self.CONFigure_FRESistance = SCPI_Message(self, 'CONFigure:FRESistance') # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],] (@ <scan_list>)
@@ -359,15 +371,16 @@ class Instrument:
         elif ('PERiod' == measurement):
             self.CONFigure_PERiod.Write(range, resolution, scan_list) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],] (@ <scan_list>)
 
-    def Monitor_Start(self, scan_list):
+    def Monitor_Start(self, chanels):
+        scan_list = self.Scan_list_format_from_array(chanels)
         self.ROUTe_MONitor.Write(scan_list)
         self.ROUTe_MONitor_STATe.Set()
 
     def Monitor_Stop(self):
         self.ROUTe_MONitor_STATe.Reset()
 
-    def Monitor_Read_Resoult(self):
-        return(self.ROUTe_MONitor_DATA.Read_String())
+    def Monitor_Read_Resoult(self, Target_Function):
+        self.ROUTe_MONitor_DATA.Read(Target_Function)
     
     def Scan_Data_Format_Set(self, alarm, chanel, time, unit, time_type):
         self.FORMat_READing_ALARm.Write(alarm) # {OFF|ON}
