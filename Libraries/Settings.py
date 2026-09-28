@@ -47,13 +47,13 @@ class Settings:
     def Read_from_default_file(self, name, path = here):
         self.df = pd.read_csv(os.path.join(path, name + ".csv"), sep=",", index=False)
 
-
-Setting_1 = Settings("data", here, None)
+"""
+Setting_1 = Settings("Settings", here, None)
 Setting_1.Get_setting("Name_1", "Data_1")
 Setting_1.Set_setting("Name_1", "Data_2")
 Setting_1.Save_to_default_file()
 Setting_1.Get_setting("Name_1", "Data_1")
-
+"""
 """
 df = pd.read_csv("data.csv", sep=";")
 df.to_csv("output.csv", sep=";", index=False)

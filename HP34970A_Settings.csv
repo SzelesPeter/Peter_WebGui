@@ -1,0 +1,5 @@
+Name,Value
+RS232_1_Port,ttyUSB2
+RS232_1_Baud,115200
+RS232_1_Parity,NONE
+RS232_1_Flow,Dsr/Dtr
