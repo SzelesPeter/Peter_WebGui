@@ -5,15 +5,10 @@ class SCPI_Message:
         self.Command = Command
 
     def __Send_Command(self, Text):
-        print('OUT => ' + Text)
-        self.Instrument.Interface.Command(Text)
-        time.sleep(0.01)
+        self.Instrument.Interface.Message_out_request(message_out=Text, message_in_target_function = None, timeout = 0, message_delay_after = 0.5)
 
-    def __Send_Query(self, Text):
-        print('OUT => ' + Text)
-        tmp = self.Instrument.Interface.Query(Text)
-        print('IN <= ' + str(tmp))
-        return (tmp)
+    def __Send_Query(self, Text, Target_Function):
+        self.Instrument.Interface.Message_out_request(message_out=Text, message_in_target_function = Target_Function, timeout = 10)
 
     def Set(self):
         self.__Send_Command(self.Command + ' ON')
@@ -30,16 +25,25 @@ class SCPI_Message:
                 Message = Message + ',' + variable
         self.__Send_Command(Message)
 
-    def Read_Bytes(self, *variables):
+    def Read(self, Target_Function, *variables):
+        Message = self.Command + '?'
+        for i, variable in enumerate(variables):
+            if (0 == i):
+                Message = Message + ' ' + variable
+            else:
+                Message = Message + ',' + variable 
+        self.__Send_Query(Message, Target_Function)
+    """
+    def Read_Bytes(self, *variables, Target_Function):
         Message = self.Command + '?'
         for i, variable in enumerate(variables):
             if (0 == i):
                 Message = Message + ' ' + variable
             else:
                 Message = Message + ',' + variable       
-        return (self.__Send_Query(Message))
+        self.__Send_Query(Message, Target_Function)
 
-    def Read_Bits(self, lenght, *variables):
+    def Read_Bits(self, *variables, Target_Function):
         Message = self.Command + '?'
         for i, variable in enumerate(variables):
             if (0 == i):
@@ -75,6 +79,7 @@ class SCPI_Message:
     
     def Read_Array_From_Block(self, *variables):  
         return (self.Read_Block(*variables).split(','))
+    """
     
 
 class Instrument:
@@ -222,8 +227,32 @@ class Instrument:
     def Interface_Set(self, Interface):
         self.Inter__Interfaceface = Interface
 
+    def Remote(self):
+        self.SYSTem_REMote.Write()
 
-    def Configure_Chanels(self, measurement, range = 'AUTO', resolution = 'DEF', TCouple = 'DEF', type = 'DEF'):
+    def Measure_Chanel(self, measurement, Target_Function, range = 'AUTO', resolution = 'DEF'):
+        if ('VOLTage_DC' == measurement):
+            self.MEASure_VOLTage_DC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('VOLTage_AC' == measurement):
+            self.MEASure_VOLTage_AC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('RESistance' == measurement):
+            self.MEASure_RESistance.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('FRESistance' == measurement):
+            self.MEASure_FRESistance.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('CURRent_DC ' == measurement):
+            self.MEASure_CURRent_DC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('CURRent_AC' == measurement):
+            self.MEASure_CURRent_AC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('FREQuency' == measurement):
+            self.MEASure_FREQuency.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('PERiod' == measurement):
+            self.MEASure_PERiod.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('CONTinuity' == measurement):
+            self.MEASure_CONTinuity.Read(Target_Function)
+        elif ('DIODe' == measurement):
+            self.MEASure_DIODe.Read(Target_Function)
+
+    def Configure_Chanels(self, measurement, range = 'AUTO', resolution = 'DEF'):
         if ('VOLTage_DC' == measurement):
             self.CONFigure_VOLTage_DC.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
         elif ('VOLTage_AC' == measurement):
@@ -253,19 +282,21 @@ class Instrument:
     def Scan_Trigger(self):
         self.TRG.Write()
     
-    def Scan_Data_Count(self):
-        return(self.DATA_POINts.Read_String())
+    def Scan_Data_Count(self, Target_Function):
+        self.DATA_POINts.Read(Target_Function),
     
-    def Scan_Data_Remove_All(self):
+    def Scan_Data_Remove_All(self, Target_Function):
         if(self.Scan_Data_Exists()):
-            return(self.FETCh.Read_Array_From_Block())
+            self.FETCh.Read(Target_Function)
     
     def Scan_Data_Exists(self):
         if 0 == int(self.Scan_Data_Count()):
            return(False)
         else:
             return(True)
-    
+
+    def Beep(self):
+            self.SYSTem_BEEPer.Write()
 
 
 # ==================================== v TEST v ===========================================================================

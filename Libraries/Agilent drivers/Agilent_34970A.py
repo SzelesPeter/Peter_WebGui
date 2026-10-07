@@ -1,8 +1,3 @@
-import sys, os
-Peter_WebGui_Path = os.path.dirname(sys.path[0])
-sys.path.append(os.path.join(os.path.join(Peter_WebGui_Path, 'Libraries'), 'Agilent drivers'))
-import Agilent_34970A
-
 
 class SCPI_Message:
     def __init__(self, Instrument, Command):
@@ -10,10 +5,10 @@ class SCPI_Message:
         self.Command = Command
 
     def __Send_Command(self, Text):
-        self.Instrument.Interface.Message_out_request(message_out=Text, in_message_target_function = None)
+        self.Instrument.Interface.Message_out_request(message_out=Text, message_in_target_function = None, timeout = 0)
 
     def __Send_Query(self, Text, Target_Function):
-        self.Instrument.Interface.Message_out_request(message_out=Text, in_message_target_function = Target_Function)
+        self.Instrument.Interface.Message_out_request(message_out=Text, message_in_target_function = Target_Function, timeout = 10)
 
     def Set(self):
         self.__Send_Command(self.Command + ' ON')

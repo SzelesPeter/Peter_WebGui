@@ -36,9 +36,25 @@ call in_message_target_function_list.pop(message_in)        Generate_report(out_
 """
 
 import Time
+import numpy as np
 
-def Default_Function(data):
-    pass
+class Message_request:
+    def __init__(self, message_out, message_request_time, message_in_target_function, message_timeout, message_delay_after):
+        self.message_out = message_out
+        self.message_request_time = message_request_time
+        self.message_in_target_function = message_in_target_function
+        self.message_timeout = message_timeout
+        self.message_delay_after = message_delay_after
+
+class Message_sent:
+    def __init__(self, message_out, message_request_time, message_out_time , message_in_target_function, message_timeout, timeout_start_time):
+        self.message_out = message_out
+        self.message_request_time = message_request_time
+        self.message_out_time = message_out_time
+        self.message_in_target_function = message_in_target_function
+        self.message_timeout = message_timeout
+        self.timeout_start_time = timeout_start_time
+
 
 class Communicator:
     def __init__(self, message_out_function, message_line_in_function, max_number_of_messages_out = 1, generate_log_function = None):
@@ -46,58 +62,76 @@ class Communicator:
         self.message_line_in_function = message_line_in_function
         self.max_number_of_messages_out = max_number_of_messages_out
         self.generate_log_function = generate_log_function
-        self.message_out_request_list = []
-        self.message_timeout_list = []
-        self.message_out_sent_list = []
-        self.message_out_request_time_list = []
-        self.message_out_time_list = []
-        self.message_in_target_function_request_list = []
-        self.message_in_target_function_list = []
-        self.number_of_messages_out = 0
+        self.message_out_request_list = np.empty(0, dtype=Message_request)
+        self.message_out_sent_list = np.empty(0, dtype=Message_sent)
+        self.last_message_send_time = Time.Start_Measureing_Elapsed_Time()
+        self.message_delay_after = 0
 
-    def Message_out_request(self, message_out, in_message_target_function = Default_Function, timeout = 1000):
-        self.message_out_request_list.append(message_out)
-        self.message_out_request_time_list.append(Time.Get_Time_text())
-        self.message_in_target_function_request_list.append(in_message_target_function)
-        print(in_message_target_function)
-        self.message_timeout_list.append(timeout)
+    def Message_out_request(self, message_out, message_in_target_function = None, timeout = 0, message_delay_after = 0):
+        self.message_out_request_list = np.append(self.message_out_request_list, Message_request(message_out, Time.Get_Time_text(), message_in_target_function, timeout, message_delay_after))
 
     def Message_out_worker(self):
-        if self.number_of_messages_out < self.max_number_of_messages_out:
-            if len(self.message_out_request_list) != 0:
-                message_out = self.message_out_request_list.pop(0)
-                print(message_out)
-                self.message_out_function(message_out)
-                self.message_out_sent_list.append(message_out)
-                self.message_out_time_list.append(Time.Get_Time_text())
-                self.message_in_target_function_list.append(self.message_in_target_function_request_list.pop(0))
-                self.number_of_messages_out = self.number_of_messages_out +1
+        if self.message_delay_after < Time.Time_Elapsed_Since_Start(self.last_message_send_time):
+            if len(self.message_out_sent_list) < self.max_number_of_messages_out:
+                if len(self.message_out_request_list) != 0:
+                    Message_request_object: Message_request = self.message_out_request_list[0]
+                    self.message_out_request_list = np.delete(self.message_out_request_list, 0)
+                    timeout = Message_request_object.message_timeout
+                    if timeout != 0:
+                        for message in self.message_out_sent_list:
+                            timeout = timeout + message.message_timeout
+                    self.message_out_function(Message_request_object.message_out)
+                    self.message_out_sent_list = np.append(self.message_out_sent_list, Message_sent(Message_request_object.message_out,
+                                                                                                    Message_request_object.message_request_time,
+                                                                                                    Time.Get_Time_text(),
+                                                                                                    Message_request_object.message_in_target_function,
+                                                                                                    timeout,
+                                                                                                    Time.Start_Measureing_Elapsed_Time()))
+                    self.message_delay_after = Message_request_object.message_delay_after
+                    self.last_message_send_time = Time.Start_Measureing_Elapsed_Time()
 
     def Message_in_worker(self):
         message_in = self.message_line_in_function()
         if message_in != '':
-            if self.number_of_messages_out > 0:
-                self.number_of_messages_out = self.number_of_messages_out -1
-            if self.generate_log_function != None:
-                if (len(self.message_out_sent_list) != 0) and (len(self.message_out_time_list) != 0):
-                    self.generate_log_function(self.message_out_request_time_list.pop(0), self.message_out_time_list.pop(0), self.message_out_sent_list.pop(0),Time.Get_Time_text(), message_in, self.number_of_messages_out)
-                else:
-                    self.generate_log_function('', '', '', message_in, Time.Get_Time_text(), self.number_of_messages_out)
-            if len(self.message_in_target_function_list) != 0:
-                function = self.message_in_target_function_list.pop(0)
-                function(message_in)
+            if (len(self.message_out_sent_list) != 0):
+                Message_sent_object: Message_sent = self.message_out_sent_list[0]
+                self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
+                if Message_sent_object.message_in_target_function != None:
+                    Message_sent_object.message_in_target_function(message_in)
+                if self.generate_log_function != None:
+                    self.generate_log_function(Message_sent_object.message_request_time,
+                                               Message_sent_object.message_out_time,
+                                               Message_sent_object.message_out,
+                                               Time.Get_Time_text(),
+                                               message_in,
+                                               str(len(self.message_out_sent_list)))
+            else:
+                if self.generate_log_function != None:
+                    self.generate_log_function('', '', '', message_in, Time.Get_Time_text(), 'Unexpected!')
+
         else:
-            if len(self.message_in_target_function_list) != 0:
-                if self.number_of_messages_out > 0:
-                    if self.message_in_target_function_list[-1] == None:
-                        self.message_in_target_function_list.pop(0)
-                        self.number_of_messages_out = self.number_of_messages_out -1 
-                        if self.generate_log_function != None:
-                            self.generate_log_function(self.message_out_request_time_list.pop(0), self.message_out_time_list.pop(0), self.message_out_sent_list.pop(0), '', '', self.number_of_messages_out)
-        
+            if len(self.message_out_sent_list != 0):
+                if self.message_out_sent_list[0].message_timeout == 0:
+                    if self.generate_log_function != None:
+                        Message_sent_object: Message_sent = self.message_out_sent_list[0]
+                        self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
+                        self.generate_log_function(Message_sent_object.message_request_time,
+                                                   Message_sent_object.message_out_time,
+                                                   Message_sent_object.message_out,
+                                                   '',
+                                                   '',
+                                                   str(len(self.message_out_sent_list)))
+                else:
+                    if self.message_out_sent_list[-1].message_timeout <= Time.Time_Elapsed_Since_Start(self.message_out_sent_list[-1].timeout_start_time):
+                        Message_sent_object: Message_sent = self.message_out_sent_list[0]
+                        self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
+                        self.generate_log_function(Message_sent_object.message_request_time,
+                                                   Message_sent_object.message_out_time,
+                                                   Message_sent_object.message_out,
+                                                   '',
+                                                   '',
+                                                   'Timeout!')
+                                
 
-    
 
 
-
-import serial

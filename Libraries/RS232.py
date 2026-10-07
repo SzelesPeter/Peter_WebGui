@@ -2,7 +2,7 @@
 import serial
 from serial.tools.list_ports import comports
 
-
+Windows = False
 
 
         
@@ -60,7 +60,10 @@ class RS232:
         if(self.ser.is_open):
             Error = "Serial port is already open"
         else:
-            self.ser.port = '/dev/' + self.Port
+            if Windows:
+                self.ser.port = self.Port
+            else:
+                self.ser.port = '/dev/' + self.Port
             self.ser.baudrate = self.Baud
             self.ser.bytesize = serial.EIGHTBITS
             self.ser.dsrdtr = False
