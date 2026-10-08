@@ -239,7 +239,7 @@ class Instrument:
             self.MEASure_RESistance.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
         elif ('FRESistance' == measurement):
             self.MEASure_FRESistance.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('CURRent_DC ' == measurement):
+        elif ('CURRent_DC' == measurement):
             self.MEASure_CURRent_DC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
         elif ('CURRent_AC' == measurement):
             self.MEASure_CURRent_AC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]

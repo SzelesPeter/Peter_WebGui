@@ -32,9 +32,10 @@ def Blink():
             Element.Highlight(False)
 
 class Button:
-    def __init__(self, function_when_pressed, name = '', width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color):
+    def __init__(self, function_when_pressed, name = '', width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, text_color = Default_border_color):
         self.background_color = background_color
         self.border_color = border_color
+        self.text_color = text_color
         self.Highlighted = False
         self.Blinking = False
 
@@ -43,7 +44,7 @@ class Button:
             .props('unelevated') \
             .style(f'''
                 background-color: {self.background_color} !important;
-                color: {self.border_color} !important;
+                color: {self.text_color} !important;
                 border: 3px solid {self.border_color} !important;
                 border-radius: 0 !important;
 
@@ -142,29 +143,56 @@ class Progress_bar:
             self.Progress_bar_element.set_text_color(self.color) #set_text_color sets bar color for some reson!!!
         self.Highlighted = state
 
-def Create_Label_Left(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color):
-    return ui.label(text).classes('w-full h-full flex items-center').style(f'''
-        color: {color} !important;
-        font-size: {font_size} !important;
-        width: {width};
-        height: {height};
-    ''')
+def Create_Label_Left(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
+    if(background_color != None):
+        return ui.label(text).classes('w-full h-full flex items-center').style(f'''
+            background-color: {background_color} !important;
+            color: {color} !important;
+            font-size: {font_size} !important;
+            width: {width};
+            height: {height};
+        ''')
+    else:
+        return ui.label(text).classes('w-full h-full flex items-center').style(f'''
+            color: {color} !important;
+            font-size: {font_size} !important;
+            width: {width};
+            height: {height};
+        ''')
 
-def Create_Label_Right(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color):
-    return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
-        color: {color} !important;
-        font-size: {font_size} !important;
-        width: {width};
-        height: {height};
-    ''')
+def Create_Label_Right(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
+    if(background_color != None):
+        return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
+            background-color: {background_color} !important;
+            color: {color} !important;
+            font-size: {font_size} !important;
+            width: {width};
+            height: {height};
+        ''')
+    else:
+        return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
+            color: {color} !important;
+            font-size: {font_size} !important;
+            width: {width};
+            height: {height};
+        ''')
 
-def Create_Label_Center(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color):
-    return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
-        color: {color} !important;
-        font-size: {font_size} !important;
-        width: {width};
-        height: {height};
-    ''')
+def Create_Label_Center(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
+    if(background_color != None):
+        return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
+            background-color: {background_color} !important;
+            color: {color} !important;
+            font-size: {font_size} !important;
+            width: {width};
+            height: {height};
+        ''')
+    else:
+        return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
+            color: {color} !important;
+            font-size: {font_size} !important;
+            width: {width};
+            height: {height};
+        ''')
 
 class Number_input:
     def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0):

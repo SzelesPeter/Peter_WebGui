@@ -50,6 +50,9 @@ def G10_Add_New_Line(time_request, time_out, data_out, time_in, data_in, message
 Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Line, message_line_in_function=RS232_1.Read_Line, max_number_of_messages_out= 1, generate_log_function= G10_Add_New_Line)
 Instrument_1 = Agilent_34401A.Instrument(Communicator_1)
 
+Running = False
+Measure = 'DC V'
+Resolution = 'DEF'
 data = []
 i = 1
 
@@ -59,42 +62,7 @@ def main_page():
     ui.query('body').style(f'background-color: {WGV.Default_page_color};')
 
     with ui.row():
-
-        with WGV.Card(name= 'Charts', width='1050px', height='440px'):
-            with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
-                chart1 = WGTM.Chart(name = 'Chart 1', xaxis_name= 'X', yaxis_name= 'Y')
-
-        with WGV.Card(name= 'Test', width= '1000px', height= '400px'):
-            L_Test = WGV.Create_Label_Left('Not Tested', font_size= '20px', width = '200px')
-            global Running
-            Running = False
-            def Reading_value(text):
-                global Running
-                L_Test.set_text(text)
-                if text != 'Waiting':
-                    global i
-                    data.append([i, float(text)])
-                    i = i + 1
-                    chart1.add_trace('Test', data, digital= False)
-                    chart1.set_xaxis_range()
-                    chart1.set_yaxis_range()
-                if Running:
-                    Instrument_1.Measure_Chanel('VOLTage_DC', Reading_value, range = 'AUTO', resolution = 'DEF') #resolution = 'MIN'   resolution = 'DEF'
-            def B_Test_Function():
-                global Running
-                Instrument_1.Remote()
-                Instrument_1.Beep()
-                Running = True
-                Reading_value('Waiting')
-            def B_Stop_Function():
-                global Running
-                Running = False
-            B_Test = WGV.Button(lambda: B_Test_Function(), name='Test', width= '120px')
-            B_Stop = WGV.Button(lambda: B_Stop_Function(), name='Stop', width= '120px')
-
-    with ui.row():
-
-        with WGV.Card(name= 'COM Port', width= '301px', height= '400px'):
+        with WGV.Card(name= 'HP 34401A COM Port', width= '310px', height= '400px'):
             with ui.row(): # column with no spaceing:
                 L1 = WGV.Create_Label_Right('Port:', font_size= '20px', width= '80px')
                 def DDC1_Function(port):
@@ -129,7 +97,7 @@ def main_page():
                     Setting_1.Save_to_default_file()
                     if RS232_1.Open() == None:
                         L9.set_text('Connected')
-                B5 = WGV.Button(lambda: B5_Function(), name='Connect', width= '120px')
+                B5 = WGV.Button(lambda: B5_Function(), name='Connect', width= '120px',background_color = '#B12C2C')
                 def B6_Function():
                     if RS232_1.Close() == None:
                         L9.set_text('Not Connected')
@@ -137,9 +105,185 @@ def main_page():
             with ui.row():
                 L9 = WGV.Create_Label_Left('Not Connected', font_size= '20px', width = '200px')
 
-        with WGV.Card(name= 'COM Port', width= '2042px', height= '400px'):
+        with ui.column().classes('gap-0 p-0 m-0'): # column with no spaceing
+            with WGV.Card(name= None, width= '1000px', height= '200px', background_color = "#000000"):
+                Display = WGV.Create_Label_Right('Hello!', font_size= '100px', width = '900px', height = '180px', background_color = "#000000", color = "#39BDE9")
+            with WGV.Card(name= None, width= '1000px', height= '200px', background_color = "#808080"):
+                global Running
+                Running = False
+                def set_display(text):
+                    global Measure
+                    sufix = ''
+                    if Measure == 'DC V':
+                        sufix = 'V'
+                    if Measure == 'AC V':
+                        sufix = 'V'
+                    if Measure == 'DC I':
+                        sufix = 'A'
+                    if Measure == 'AC I':
+                        sufix = 'A'
+                    if Measure == 'Ω 2W':
+                        sufix = 'Ω'
+                    if Measure == 'Ω 4W':
+                        sufix = 'Ω'
+                    if Measure == 'Freq':
+                        sufix = 'Hz'
+                    if Measure == 'Period':
+                        sufix = 's'
+                    if Measure == 'Cont':
+                        sufix = 'Ω'
+                    if Measure == 'Diode':
+                        sufix = 'V'
+                    Display.set_text(f"{float(text):.8f}" + ' ' + sufix)
+                def Reading_value_single():
+                    global Measure
+                    global Resolution
+                    Display.set_text('Waiting')
+                    if Measure == 'DC V':
+                        measurement_varriable = 'VOLTage_DC'
+                    if Measure == 'AC V':
+                        measurement_varriable = 'VOLTage_AC'
+                    if Measure == 'DC I':
+                        measurement_varriable = 'CURRent_DC'
+                    if Measure == 'AC I':
+                        measurement_varriable = 'CURRent_AC'
+                    if Measure == 'Ω 2W':
+                        measurement_varriable = 'RESistance'
+                    if Measure == 'Ω 4W':
+                        measurement_varriable = 'FRESistance'
+                    if Measure == 'Freq':
+                        measurement_varriable = 'FREQuency'
+                    if Measure == 'Period':
+                        measurement_varriable = 'PERiod'
+                    if Measure == 'Cont':
+                        measurement_varriable = 'CONTinuity'
+                    if Measure == 'Diode':
+                        measurement_varriable = 'DIODe'
+                    Instrument_1.Remote()
+                    Instrument_1.Beep()
+                    Instrument_1.Measure_Chanel(measurement_varriable, set_display, range = 'AUTO', resolution = Resolution) #resolution = 'MIN'   resolution = 'DEF'
+                def Reading_value(text):
+                    global Running
+                    global Measure
+                    global Resolution
+                    if text == 'Waiting':
+                        Display.set_text(text)
+                    else:
+                        set_display(text)
+                    if Running:
+                        if Measure == 'DC V':
+                            measurement_varriable = 'VOLTage_DC'
+                        if Measure == 'AC V':
+                            measurement_varriable = 'VOLTage_AC'
+                        if Measure == 'DC I':
+                            measurement_varriable = 'CURRent_DC'
+                        if Measure == 'AC I':
+                            measurement_varriable = 'CURRent_AC'
+                        if Measure == 'Ω 2W':
+                            measurement_varriable = 'RESistance'
+                        if Measure == 'Ω 4W':
+                            measurement_varriable = 'FRESistance'
+                        if Measure == 'Freq':
+                            measurement_varriable = 'FREQuency'
+                        if Measure == 'Period':
+                            measurement_varriable = 'PERiod'
+                        if Measure == 'Cont':
+                            measurement_varriable = 'CONTinuity'
+                        if Measure == 'Diode':
+                            measurement_varriable = 'DIODe'
+                        Instrument_1.Measure_Chanel(measurement_varriable, Reading_value, range = 'AUTO', resolution = Resolution) #resolution = 'MIN'   resolution = 'DEF'
+                def B_Start_Function():
+                    global Running
+                    global Measure
+                    global Resolution
+                    Instrument_1.Remote()
+                    Instrument_1.Beep()
+                    if Measure == 'DC V':
+                        measurement_varriable = 'VOLTage_DC'
+                    if Measure == 'AC V':
+                        measurement_varriable = 'VOLTage_AC'
+                    if Measure == 'DC I':
+                        measurement_varriable = 'CURRent_DC'
+                    if Measure == 'AC I':
+                        measurement_varriable = 'CURRent_AC'
+                    if Measure == 'Ω 2W':
+                        measurement_varriable = 'RESistance'
+                    if Measure == 'Ω 4W':
+                        measurement_varriable = 'FRESistance'
+                    if Measure == 'Freq':
+                        measurement_varriable = 'FREQuency'
+                    if Measure == 'Period':
+                        measurement_varriable = 'PERiod'
+                    if Measure == 'Cont':
+                        measurement_varriable = 'CONTinuity'
+                    if Measure == 'Diode':
+                        measurement_varriable = 'DIODe'
+                    Instrument_1.Configure_Chanels(measurement_varriable, range = 'AUTO', resolution = Resolution) #resolution = 'MIN'   resolution = 'DEF'
+                    Running = True
+                    Reading_value('Waiting')
+                def B_Stop_Function():
+                    global Running
+                    Running = False
+                def B_Test_Function():
+                    pass
+                with ui.row():
+                    B_Start = WGV.Button(lambda: B_Start_Function(), name='START', width= '80px', background_color = "#F5F5F5", border_color = '#2A2727', text_color = "#2A2727")
+                    B_Stop = WGV.Button(lambda: B_Stop_Function(), name='STOP', width= '80px', background_color = "#2A2727")
+                    B_Meas = WGV.Button(lambda: Reading_value_single(), name='Measure', width= '100px', background_color = "#B12C2C")
+                    def DDC_Measure_function(chosen_measurement):
+                        global Measure
+                        Measure = chosen_measurement
+                    DDC_Measure = WGV.Create_Dropdown_Card(options=['DC V', 'AC V', 'DC I', 'AC I', 'Ω 2W', 'Ω 4W', 'Freq', 'Period'], function_to_call=DDC_Measure_function, width= '120px', background_color = "#2A2727")
+                    L_Resolution = WGV.Create_Label_Left('Resolution:', font_size= '20px', width = '100px')
+                    def DDC_Resolution_function(chosen_resolution):
+                        global Resolution
+                        Resolution = chosen_resolution
+                    DDC_Resolution = WGV.Create_Dropdown_Card(options=['DEF', 'MIN', 'MAX'], function_to_call=DDC_Resolution_function, width= '100px', background_color = "#2A2727")
+                with ui.row():
+                    pass
+                
+
+
+    with ui.row():
+
+        with WGV.Card(name= 'Charts', width='1050px', height='440px'):
+            with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
+                chart1 = WGTM.Chart(name = 'Chart 1', xaxis_name= 'X', yaxis_name= 'Y')
+
+        with WGV.Card(name= 'Test', width= '1000px', height= '400px'):
+            L_Test = WGV.Create_Label_Left('Not Tested', font_size= '20px', width = '200px')
+            Running = False
+            def Reading_value2(text):
+                global Running
+                L_Test.set_text(text)
+                if text != 'Waiting':
+                    global i
+                    data.append([i, float(text)])
+                    i = i + 1
+                    chart1.add_trace('Test', data, digital= False)
+                    chart1.set_xaxis_range()
+                    chart1.set_yaxis_range()
+                if Running:
+                    Instrument_1.Measure_Chanel('VOLTage_DC', Reading_value2, range = 'AUTO', resolution = 'DEF') #resolution = 'MIN'   resolution = 'DEF'
+            def B_Test_Function2():
+                global Running
+                Instrument_1.Remote()
+                Instrument_1.Beep()
+                Running = True
+                Reading_value2('Waiting')
+            def B_Stop_Function2():
+                global Running
+                Running = False
+            B_Test = WGV.Button(lambda: B_Test_Function2(), name='Test', width= '120px')
+            B_Stop = WGV.Button(lambda: B_Stop_Function2(), name='Stop', width= '120px')
+
+    with ui.row():
+
+ 
+
+        with WGV.Card(name= 'HP 34401A COM Port', width= '1820px', height= '400px'):
             global G10
-            G10 = WGV.Create_Grid(data=df,width= 2000)
+            G10 = WGV.Create_Grid(data=df,width= 1800)
             with ui.row():
                 T10 = WGV.Text_input(default_text='*IDN?', width= '1000px', font_size= '5px')
                 def B11_Function():
