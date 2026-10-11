@@ -62,53 +62,58 @@ def main_page():
     ui.query('body').style(f'background-color: {WGV.Default_page_color};')
 
     with ui.row():
-        with WGV.Card(name= 'HP 34401A COM Port', width= '310px', height= '400px'):
-            with ui.row(): # column with no spaceing:
-                L1 = WGV.Create_Label_Right('Port:', font_size= '20px', width= '80px')
-                def DDC1_Function(port):
-                    RS232_1.Set_Port(port)
-                    Setting_1.Set_setting("RS232_1_Port", port)
-                    DDC1.set_options(RS232_1.Get_Possible_Ports())
-                DDC1 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Ports(), function_to_call=DDC1_Function, width= '160px')
-                DDC1.set_value(Setting_1.Get_setting("RS232_1_Port", RS232_1.Get_Port()))
-            with ui.row():
-                L2 = WGV.Create_Label_Right('Baud:', font_size= '20px', width= '80px')
-                def DDC2_Function(baud):
-                    Setting_1.Set_setting("RS232_1_Baud", baud)
-                    RS232_1.Set_Baud(baud)
-                DDC2 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Bauds(), function_to_call=DDC2_Function, width= '160px')
-                DDC2.set_value(Setting_1.Get_setting("RS232_1_Baud", RS232_1.Get_Baud()))
-            with ui.row():
-                L3 = WGV.Create_Label_Right('Parity:', font_size= '20px', width= '80px')
-                def DDC3_Function(parity):
-                    Setting_1.Set_setting("RS232_1_Parity", parity)
-                    RS232_1.Set_Parity(parity)
-                DDC3 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Paritys(), function_to_call=DDC3_Function, width= '160px')
-                DDC3.set_value(Setting_1.Get_setting("RS232_1_Parity", RS232_1.Get_Parity()))
-            with ui.row():
-                L4 = WGV.Create_Label_Right('Flow:', font_size= '20px', width= '80px')
-                def DDC3_Function(flow):
-                    Setting_1.Set_setting("RS232_1_Flow", flow)
-                    RS232_1.Set_Flow(flow)
-                DDC4 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Flows(), function_to_call=DDC3_Function, width= '160px')
-                DDC4.set_value(Setting_1.Get_setting("RS232_1_Flow", RS232_1.Get_Flow()))
-            with ui.row():
-                def B5_Function():
-                    Setting_1.Save_to_default_file()
-                    if RS232_1.Open() == None:
-                        L9.set_text('Connected')
-                B5 = WGV.Button(lambda: B5_Function(), name='Connect', width= '120px',background_color = '#B12C2C')
-                def B6_Function():
-                    if RS232_1.Close() == None:
-                        L9.set_text('Not Connected')
-                B6 = WGV.Button(lambda: B6_Function(), name='Disconnect', width= '120px')
-            with ui.row():
-                L9 = WGV.Create_Label_Left('Not Connected', font_size= '20px', width = '200px')
+        with ui.column():
+            with WGV.Card(name= 'HP 34401A COM Port', width= 310, height= 400):
+                with ui.row(): # column with no spaceing:
+                    L1 = WGV.Create_Label_Right('Port:', font_size= 20, width= 80)
+                    def DDC1_Function(port):
+                        RS232_1.Set_Port(port)
+                        Setting_1.Set_setting("RS232_1_Port", port)
+                        DDC1.set_options(RS232_1.Get_Possible_Ports())
+                    DDC1 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Ports(), function_to_call=DDC1_Function, width= 160)
+                    DDC1.set_value(Setting_1.Get_setting("RS232_1_Port", RS232_1.Get_Port()))
+                with ui.row():
+                    L2 = WGV.Create_Label_Right('Baud:', font_size= 20, width= 80)
+                    def DDC2_Function(baud):
+                        Setting_1.Set_setting("RS232_1_Baud", baud)
+                        RS232_1.Set_Baud(baud)
+                    DDC2 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Bauds(), function_to_call=DDC2_Function, width= 160)
+                    DDC2.set_value(Setting_1.Get_setting("RS232_1_Baud", RS232_1.Get_Baud()))
+                with ui.row():
+                    L3 = WGV.Create_Label_Right('Parity:', font_size= 20, width= 80)
+                    def DDC3_Function(parity):
+                        Setting_1.Set_setting("RS232_1_Parity", parity)
+                        RS232_1.Set_Parity(parity)
+                    DDC3 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Paritys(), function_to_call=DDC3_Function, width= 160)
+                    DDC3.set_value(Setting_1.Get_setting("RS232_1_Parity", RS232_1.Get_Parity()))
+                with ui.row():
+                    L4 = WGV.Create_Label_Right('Flow:', font_size= 20, width= 80)
+                    def DDC3_Function(flow):
+                        Setting_1.Set_setting("RS232_1_Flow", flow)
+                        RS232_1.Set_Flow(flow)
+                    DDC4 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Flows(), function_to_call=DDC3_Function, width= 160)
+                    DDC4.set_value(Setting_1.Get_setting("RS232_1_Flow", RS232_1.Get_Flow()))
+                with ui.row():
+                    def B5_Function():
+                        Setting_1.Save_to_default_file()
+                        if RS232_1.Open() == None:
+                            L9.set_text('Connected')
+                    B5 = WGV.Button(lambda: B5_Function(), name='Connect', width= 120,background_color = '#B12C2C')
+                    def B6_Function():
+                        if RS232_1.Close() == None:
+                            L9.set_text('Not Connected')
+                    B6 = WGV.Button(lambda: B6_Function(), name='Disconnect', width= 120)
+                with ui.row():
+                    L9 = WGV.Create_Label_Left('Not Connected', font_size= 20, width = 200)
+
+            with WGV.Card(name= 'HP 34401A Find', width= 310, height= 200):
+                DDC_Test = WGV.Create_Dropdown_Card_With_Name(name= 'Test:', options= ['1', '2', '3'], text_width= 50, dropdown_width= 50)
+
 
         with ui.column().classes('gap-0 p-0 m-0'): # column with no spaceing
-            with WGV.Card(name= None, width= '1000px', height= '200px', background_color = "#000000"):
-                Display = WGV.Create_Label_Right('Hello!', font_size= '100px', width = '900px', height = '180px', background_color = "#000000", color = "#39BDE9")
-            with WGV.Card(name= None, width= '1000px', height= '200px', background_color = "#808080"):
+            with WGV.Card(name= None, width= 1000, height= 200, background_color = "#000000"):
+                Display = WGV.Create_Label_Right_Bold('Hello!', font_size= 100, width = 900, height = 180, background_color = "#000000", color = "#DF9439")
+            with WGV.Card(name= None, width= 1000, height= 200, background_color = "#808080"):
                 global Running
                 Running = False
                 def set_display(text):
@@ -161,7 +166,11 @@ def main_page():
                         measurement_varriable = 'DIODe'
                     Instrument_1.Remote()
                     Instrument_1.Beep()
-                    Instrument_1.Measure_Chanel(measurement_varriable, set_display, range = 'AUTO', resolution = Resolution) #resolution = 'MIN'   resolution = 'DEF'
+                    def Reading_value_single_response(data):
+                        set_display(data)
+                    Instrument_1.Measure_Chanel(measurement_varriable, Reading_value_single_response, range = 'AUTO', resolution = Resolution) #resolution = 'MIN'   resolution = 'DEF'
+                    
+
                 def Reading_value(text):
                     global Running
                     global Measure
@@ -227,18 +236,18 @@ def main_page():
                 def B_Test_Function():
                     pass
                 with ui.row():
-                    B_Start = WGV.Button(lambda: B_Start_Function(), name='START', width= '80px', background_color = "#F5F5F5", border_color = '#2A2727', text_color = "#2A2727")
-                    B_Stop = WGV.Button(lambda: B_Stop_Function(), name='STOP', width= '80px', background_color = "#2A2727")
-                    B_Meas = WGV.Button(lambda: Reading_value_single(), name='Measure', width= '100px', background_color = "#B12C2C")
+                    B_Start = WGV.Button(lambda: B_Start_Function(), name='START', width= 80, background_color = "#F5F5F5", border_color = '#2A2727', text_color = "#2A2727")
+                    B_Stop = WGV.Button(lambda: B_Stop_Function(), name='STOP', width= 80, background_color = "#2A2727")
+                    B_Meas = WGV.Button(lambda: Reading_value_single(), name='Measure', width= 100, background_color = "#B12C2C")
                     def DDC_Measure_function(chosen_measurement):
                         global Measure
                         Measure = chosen_measurement
-                    DDC_Measure = WGV.Create_Dropdown_Card(options=['DC V', 'AC V', 'DC I', 'AC I', 'Ω 2W', 'Ω 4W', 'Freq', 'Period'], function_to_call=DDC_Measure_function, width= '120px', background_color = "#2A2727")
-                    L_Resolution = WGV.Create_Label_Left('Resolution:', font_size= '20px', width = '100px')
+                    DDC_Measure = WGV.Create_Dropdown_Card(options=['DC V', 'AC V', 'DC I', 'AC I', 'Ω 2W', 'Ω 4W', 'Freq', 'Period'], function_to_call=DDC_Measure_function, width= 120, background_color = "#2A2727")
+                    L_Resolution = WGV.Create_Label_Left('Resolution:', font_size= 20, width = 100)
                     def DDC_Resolution_function(chosen_resolution):
                         global Resolution
                         Resolution = chosen_resolution
-                    DDC_Resolution = WGV.Create_Dropdown_Card(options=['DEF', 'MIN', 'MAX'], function_to_call=DDC_Resolution_function, width= '100px', background_color = "#2A2727")
+                    DDC_Resolution = WGV.Create_Dropdown_Card(options=['DEF', 'MIN', 'MAX'], function_to_call=DDC_Resolution_function, width= 100, background_color = "#2A2727")
                 with ui.row():
                     pass
                 
@@ -246,12 +255,12 @@ def main_page():
 
     with ui.row():
 
-        with WGV.Card(name= 'Charts', width='1050px', height='440px'):
+        with WGV.Card(name= 'Charts', width=1050, height=440):
             with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
                 chart1 = WGTM.Chart(name = 'Chart 1', xaxis_name= 'X', yaxis_name= 'Y')
 
-        with WGV.Card(name= 'Test', width= '1000px', height= '400px'):
-            L_Test = WGV.Create_Label_Left('Not Tested', font_size= '20px', width = '200px')
+        with WGV.Card(name= 'Test', width= 1000, height= 400):
+            L_Test = WGV.Create_Label_Left('Not Tested', font_size= 20, width = 200)
             Running = False
             def Reading_value2(text):
                 global Running
@@ -274,25 +283,25 @@ def main_page():
             def B_Stop_Function2():
                 global Running
                 Running = False
-            B_Test = WGV.Button(lambda: B_Test_Function2(), name='Test', width= '120px')
-            B_Stop = WGV.Button(lambda: B_Stop_Function2(), name='Stop', width= '120px')
+            B_Test = WGV.Button(lambda: B_Test_Function2(), name='Test', width= 120)
+            B_Stop = WGV.Button(lambda: B_Stop_Function2(), name='Stop', width= 120)
 
     with ui.row():
 
  
 
-        with WGV.Card(name= 'HP 34401A COM Port', width= '1820px', height= '400px'):
+        with WGV.Card(name= 'HP 34401A COM Port', width= 1820, height= 400):
             global G10
             G10 = WGV.Create_Grid(data=df,width= 1800)
             with ui.row():
-                T10 = WGV.Text_input(default_text='*IDN?', width= '1000px', font_size= '5px')
+                T10 = WGV.Text_input(default_text='*IDN?', width= 1000, font_size= 5)
                 def B11_Function():
                     if T10.Text_input_element.value[-1] == '?':
                         Communicator_1.Message_out_request(message_out=T10.Text_input_element.value, timeout = 1)
                     else:
                         Communicator_1.Message_out_request(message_out=T10.Text_input_element.value)
                 B11 = WGV.Button(lambda: B11_Function(), name='Write')
-                L10 = WGV.Create_Label_Left('None', font_size= '20px')
+                L10 = WGV.Create_Label_Left('None', font_size= 20)
     
 
 

@@ -9,14 +9,17 @@ Default_page_color = "#000000"
 Default_background_color = "#403636"
 Default_border_color = "#FFFFFF"
 Default_color = "#B12C2C"
-Default_width = '100px'
-Default_height = '44px'
-Default_box_width = '1000px'
-Default_box_height = '400px'
-Default_font_size = '16px'
+Default_width = 100
+Default_height = 44
+Default_box_width = 1000
+Default_box_height = 400
+Default_font_size = 16
 
 Blinkable = []
 Time = datetime.now()
+
+def Number_to_Pixel(number: int) -> str:
+    return (str(number) + 'px')
 
 def Time_update():
     global Time
@@ -48,10 +51,10 @@ class Button:
                 border: 3px solid {self.border_color} !important;
                 border-radius: 0 !important;
 
-                width: {width};
-                height: {height};
+                width: {Number_to_Pixel(width)};
+                height: {Number_to_Pixel(height)};
                 font-weight: bold;
-                font-size: {font_size} !important;
+                font-size: {Number_to_Pixel(font_size)} !important;
             ''')
         Blinkable.append(self)
 
@@ -60,13 +63,13 @@ class Button:
             self.Button_element.style(f'''
                 background-color: {self.border_color} !important;
                 color: {self.background_color} !important;
-                border: 4px solid {self.background_color} !important;
+                border: 3px solid {self.background_color} !important;
             ''')
         else:
             self.Button_element.style(f'''
                 background-color: {self.background_color} !important;
                 color: {self.border_color} !important;
-                border: 4px solid {self.border_color} !important;
+                border: 3px solid {self.border_color} !important;
             ''')
         self.Highlighted = state
 
@@ -87,11 +90,11 @@ class Text_input:
                 border: 3px solid {self.border_color} !important;
                 border-radius: 0 !important;
 
-                width: {width};
+                width: {Number_to_Pixel(width)};
                 padding: 0 14px !important;
-                height: {height} !important;
-                line-height: {height} !important;
-                font-size: {font_size} !important;
+                height: {Number_to_Pixel(height)} !important;
+                line-height: {Number_to_Pixel(height)} !important;
+                font-size: {Number_to_Pixel(font_size)} !important;
                 font-weight: bold !important;
                 color: {self.border_color} !important;
             ''')
@@ -124,10 +127,10 @@ class Progress_bar:
 
         self.Progress_bar_element = ui.linear_progress(value=0).props(f'color={self.color}').style(f'''
             background-color: {self.background_color};
-            width: {width};
-            height: {height};
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
             font-weight: bold !important;
-            font-size: {font_size} !important;
+            font-size: {Number_to_Pixel(font_size)} !important;
             border: 4px solid {self.border_color};
         ''')
 
@@ -148,16 +151,16 @@ def Create_Label_Left(text, font_size = Default_font_size, width = Default_width
         return ui.label(text).classes('w-full h-full flex items-center').style(f'''
             background-color: {background_color} !important;
             color: {color} !important;
-            font-size: {font_size} !important;
-            width: {width};
-            height: {height};
+            font-size: {Number_to_Pixel(font_size)} !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
         ''')
     else:
         return ui.label(text).classes('w-full h-full flex items-center').style(f'''
             color: {color} !important;
-            font-size: {font_size} !important;
-            width: {width};
-            height: {height};
+            font-size: {Number_to_Pixel(font_size)} !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
         ''')
 
 def Create_Label_Right(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
@@ -165,16 +168,16 @@ def Create_Label_Right(text, font_size = Default_font_size, width = Default_widt
         return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
             background-color: {background_color} !important;
             color: {color} !important;
-            font-size: {font_size} !important;
-            width: {width};
-            height: {height};
+            font-size: {Number_to_Pixel(font_size)} !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
         ''')
     else:
         return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
             color: {color} !important;
-            font-size: {font_size} !important;
-            width: {width};
-            height: {height};
+            font-size: {Number_to_Pixel(font_size)} !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
         ''')
 
 def Create_Label_Center(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
@@ -182,16 +185,73 @@ def Create_Label_Center(text, font_size = Default_font_size, width = Default_wid
         return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
             background-color: {background_color} !important;
             color: {color} !important;
-            font-size: {font_size} !important;
-            width: {width};
-            height: {height};
+            font-size: {Number_to_Pixel(font_size)} !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
         ''')
     else:
         return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
             color: {color} !important;
-            font-size: {font_size} !important;
-            width: {width};
-            height: {height};
+            font-size: {Number_to_Pixel(font_size)} !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
+        ''')
+
+def Create_Label_Left_Bold(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
+    if(background_color != None):
+        return ui.label(text).classes('w-full h-full flex items-center').style(f'''
+            background-color: {background_color} !important;
+            color: {color} !important;
+            font-size: {Number_to_Pixel(font_size)} !important;
+            font-weight: bold !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
+        ''')
+    else:
+        return ui.label(text).classes('w-full h-full flex items-center').style(f'''
+            color: {color} !important;
+            font-size: {Number_to_Pixel(font_size)} !important;
+            font-weight: bold !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
+        ''')
+
+def Create_Label_Right_Bold(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
+    if(background_color != None):
+        return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
+            background-color: {background_color} !important;
+            color: {color} !important;
+            font-size: {Number_to_Pixel(font_size)} !important;
+            font-weight: bold !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
+        ''')
+    else:
+        return ui.label(text).classes('w-full h-full flex items-center justify-end').style(f'''
+            color: {color} !important;
+            font-size: {Number_to_Pixel(font_size)} !important;
+            font-weight: bold !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
+        ''')
+
+def Create_Label_Center_Bold(text, font_size = Default_font_size, width = Default_width, height = Default_height, color = Default_border_color, background_color = None):
+    if(background_color != None):
+        return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
+            background-color: {background_color} !important;
+            color: {color} !important;
+            font-size: {Number_to_Pixel(font_size)} !important;
+            font-weight: bold !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
+        ''')
+    else:
+        return ui.label(text).classes('w-full h-full flex items-center justify-center').style(f'''
+            color: {color} !important;
+            font-size: {Number_to_Pixel(font_size)} !important;
+            font-weight: bold !important;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
         ''')
 
 class Number_input:
@@ -215,8 +275,8 @@ class Number_input:
 
         
         with ui.row().style(f'''
-            width: {width};
-            height: {height};
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)};
             gap: 0;
         '''):
 
@@ -224,7 +284,7 @@ class Number_input:
                 'borderless'
             ).style(f'''
                 flex: 1;
-                height: {height};
+                height: {Number_to_Pixel(height)};
                 width: 100%;
         
                 background-color: {background_color};
@@ -232,7 +292,7 @@ class Number_input:
                 border-right: none;
                 border-radius: 0;
         
-                font-size: {font_size} !important;
+                font-size: {Number_to_Pixel(font_size)} !important;
                 font-weight: bold !important;
                 color: {border_color} !important;
         
@@ -244,7 +304,7 @@ class Number_input:
         
             with ui.column().style(f'''
                 width: 45px;
-                height: {height};
+                height: {Number_to_Pixel(height)};
                 gap: 0;
             '''):
         
@@ -290,23 +350,38 @@ def Create_Radio_Button(function_to_call, options = [], font_size = Default_font
         on_change=lambda e: function_to_call(e.value)
     ).style(f'''
         color:  {border_color};
-        font-size: {font_size};
+        font-size: {Number_to_Pixel(font_size)};
         font-weight: bold;
     ''').props('dark')
 
-def Create_Dropdown_Card(function_to_call, options = [], width = Default_width, font_size = Default_font_size, color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
+def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_width, height = Default_height, font_size = Default_font_size, color = Default_color, background_color = Default_background_color, border_color = Default_border_color, border_width = 2):
     # ---------- DROPDOWN CARD ----------
     ui.add_head_html(f'''
     <style>
+
+    .q-select .q-field__control::before,
+    .q-select .q-field__control::after,
+    .q-select .q-field__native::before,
+    .q-select .q-field__native::after {{
+        border-bottom: none !important;
+        box-shadow: none !important;
+    }}
+
+    .q-select .q-field__control {{
+        border: none !important;
+        box-shadow: none !important;
+        padding-left: 8px !important;
+    }}
     .q-select__control {{
         background-color: {background_color} !important;
-        border: 2px solid {border_color} !important;
+        border: {Number_to_Pixel(border_width)} solid {border_color} !important;
         border-radius: 0 !important;
+        box-shadow: none !important;
     }}
 
     .q-field__native {{
         color: {border_color} !important;
-        font-size: {font_size} !important;
+        font-size: {Number_to_Pixel(font_size)} !important;
         font-weight: bold !important;
     }}
 
@@ -325,24 +400,45 @@ def Create_Dropdown_Card(function_to_call, options = [], width = Default_width, 
     </style>
     ''')
 
-    element = ui.select(
-        options=options,
-        value=options[0],
-        on_change=lambda e: function_to_call(e.value),
-    ).style(f'''
-        width: {width};
-        background-color: {background_color};
-        color: {color};
-        border: 2px solid white;
-        border-radius: 0;
-        font-size: {font_size};
-        font-weight: bold;
-    ''').props('outlined dense dark')
+    if function_to_call != None:
+        element = ui.select(
+            options=options,
+            value=options[0],
+            on_change=lambda e: function_to_call(e.value),
+        ).style(f'''
+            width: {Number_to_Pixel(width)} !important;
+            height: {Number_to_Pixel(height)} !important;
+            background-color: {background_color} !important;
+            color: {color} !important;
+            border: {Number_to_Pixel(border_width)} solid white;
+            border-radius: 0 !important;
+            font-size: {Number_to_Pixel(font_size)};
+            font-weight: bold;
+        ''').props('dense dark')
 
-    element.on('click', element.update)
+        element.on('click', element.update)
+    else:
+        element = ui.select(
+            options=options,
+            value=options[0],
+        ).style(f'''
+            width: {Number_to_Pixel(width)};
+            background-color: {background_color} !important;
+            color: {color} !important;
+            border: {Number_to_Pixel(border_width)} solid white;
+            border-radius: 0 !important;
+            font-size: {Number_to_Pixel(font_size)};
+            font-weight: bold;
+        ''').props('dense dark')
 
     return element
 
+def Create_Dropdown_Card_With_Name(name, function_to_call= None, options = [], text_width = Default_width, dropdown_width = Default_width, font_size = Default_font_size, color = Default_border_color, background_color = Default_background_color, border_color = Default_border_color):
+    
+    with Card(width= text_width+dropdown_width+14, height= 44,background_color= background_color,padding= 0,border_width= 2):
+        with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
+            Create_Label_Right_Bold(text = name, font_size = font_size, width = text_width, height = 40, color = color, background_color = None)
+            return Create_Dropdown_Card(function_to_call = function_to_call, options = options, width = dropdown_width, font_size = font_size, color = color, background_color = background_color, border_color = border_color, border_width = 0)
 
 def Create_Grid(data, width=Default_box_width, height=Default_box_height, editable = False, header_color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
 
@@ -402,22 +498,22 @@ def Create_Grid(data, width=Default_box_width, height=Default_box_height, editab
         ],
         'rowData': data.to_dict('records'),
     }).props(f'id="{grid_id}"').style(f'''
-        width: {width};
-        height: {height};
+        width: {Number_to_Pixel(width)};
+        height: {Number_to_Pixel(height)};
         border: 2px solid {border_color};
     ''')
 
 
 class Card:
-    def __init__(self, name=None, width=Default_box_width, height=Default_box_height, background_color = Default_page_color, border_color = Default_border_color, content_varriables=None):
+    def __init__(self, name=None, width=Default_box_width, height=Default_box_height, background_color = Default_page_color, border_color = Default_border_color, content_varriables=None, padding = 20,border_width= 3):
         self.Name = name
         self.Card_element = ui.card().style(f'''
             background-color: {background_color};
-            border: 3px solid {border_color};
+            border: {Number_to_Pixel(border_width)} solid {border_color};
             border-radius: 0;
-            width: {width};
-            height: {height};
-            padding: 20px;
+            width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)} !important;
+            padding: {Number_to_Pixel(padding)};
             position: relative;
             overflow: visible;
         ''')
