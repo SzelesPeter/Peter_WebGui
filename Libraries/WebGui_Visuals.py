@@ -255,7 +255,7 @@ def Create_Label_Center_Bold(text, font_size = Default_font_size, width = Defaul
         ''')
 
 class Number_input:
-    def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0):
+    def __init__(self, name = None, text_width = Default_width, number_width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0):
 
         ui.add_css('''
             input[type=number]::-webkit-inner-spin-button,
@@ -275,32 +275,41 @@ class Number_input:
 
         
         with ui.row().style(f'''
-            width: {Number_to_Pixel(width)};
+            width: {Number_to_Pixel(text_width+number_width+49)};
             height: {Number_to_Pixel(height)};
             gap: 0;
         '''):
+            
+            with Card(width= text_width+number_width+4, height= 44,background_color= background_color,padding= 0,border_width= 2):
+                with ui.row().style(f'''
+                            width: {Number_to_Pixel(text_width+number_width)};
+                            height: {Number_to_Pixel(height)};
+                            gap: 0;
+                        '''):
+                    if name:
+                        Create_Label_Right_Bold(text = name, width = text_width)
+                    self.Number_input_element = ui.number().props(
+                        'borderless'
+                    ).style(f'''
+                        flex: 1;
+                        height: {Number_to_Pixel(height-4)};
+                        width: {Number_to_Pixel(number_width)};
 
-            self.Number_input_element = ui.number().props(
-                'borderless'
-            ).style(f'''
-                flex: 1;
-                height: {Number_to_Pixel(height)};
-                width: 100%;
-        
-                background-color: {background_color};
-                border: 2px solid {border_color};
-                border-right: none;
-                border-radius: 0;
-        
-                font-size: {Number_to_Pixel(font_size)} !important;
-                font-weight: bold !important;
-                color: {border_color} !important;
-        
-                padding-left: 12px;
-                
-            ''')
+                        background-color: {background_color};
+                        border: 0px solid {border_color};
+                        border-right: none;
+                        border-radius: 0;
 
-            self.Number_input_element.set_value(default_value)
+                        font-size: {Number_to_Pixel(font_size)} !important;
+                        font-weight: bold !important;
+                        color: {border_color} !important;
+
+                        padding-left: 12px;
+                        padding-top: 0px;
+
+                    ''')
+
+                    self.Number_input_element.set_value(default_value)
         
             with ui.column().style(f'''
                 width: 45px;
@@ -317,11 +326,12 @@ class Number_input:
                     width: 100%;
                     height: 50%;
                     min-height: 0;
+                    font-size: {Number_to_Pixel(10)} !important;
         
                     background-color: {background_color};
                     color: {border_color} !important;
                     border: 2px solid {border_color};
-                    border-bottom: 2px solid {border_color};
+                    border-bottom: 0px solid {border_color};
                     border-radius: 0;
                 ''')
         
@@ -334,6 +344,7 @@ class Number_input:
                     width: 100%;
                     height: 50%;
                     min-height: 0;
+                    font-size: {Number_to_Pixel(10)} !important;
         
                     background-color: {background_color};
                     color: {border_color} !important;
@@ -370,6 +381,7 @@ def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_
     .q-select .q-field__control {{
         border: none !important;
         box-shadow: none !important;
+        padding-top: 5px !important;
         padding-left: 8px !important;
     }}
     .q-select__control {{
@@ -423,6 +435,7 @@ def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_
             value=options[0],
         ).style(f'''
             width: {Number_to_Pixel(width)};
+            height: {Number_to_Pixel(height)} !important;
             background-color: {background_color} !important;
             color: {color} !important;
             border: {Number_to_Pixel(border_width)} solid white;
@@ -438,7 +451,7 @@ def Create_Dropdown_Card_With_Name(name, function_to_call= None, options = [], t
     with Card(width= text_width+dropdown_width+14, height= 44,background_color= background_color,padding= 0,border_width= 2):
         with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
             Create_Label_Right_Bold(text = name, font_size = font_size, width = text_width, height = 40, color = color, background_color = None)
-            return Create_Dropdown_Card(function_to_call = function_to_call, options = options, width = dropdown_width, font_size = font_size, color = color, background_color = background_color, border_color = border_color, border_width = 0)
+            return Create_Dropdown_Card(function_to_call = function_to_call, options = options, width = dropdown_width, height = 32, font_size = font_size, color = color, background_color = background_color, border_color = border_color, border_width = 0)
 
 def Create_Grid(data, width=Default_box_width, height=Default_box_height, editable = False, header_color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
 

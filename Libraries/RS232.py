@@ -54,6 +54,7 @@ class RS232:
         return self.Timeout
     def Set_Timeout(self, Timeout):
         self.Timeout = Timeout
+        self.ser.timeout = self.Timeout
 
     def Open(self):
         Error = None
@@ -144,6 +145,30 @@ class RS232:
         else:
             Error = "Port: " + '/dev/' + self.Port + " cant recive, because port is not open!"
         if Text != "":
-            return Text[0:-1]
+            if Text[-1] == '\n':
+                Text = Text[0:-1]
+            if Text[-1] == '\r':
+                Text = Text[0:-1]
+            return Text
         else:
             return ""
+
+    def Find_IDE(self, maker, name):
+        self.Close()
+        Com_ports = self.Get_Possible_Ports()
+        timeout = self.Get_Timeout()
+        self.Set_Timeout(1)
+        for port in Com_ports:
+            self.Set_Port(port)
+            if self.Open() == None:
+                self.Write_Line('*IDN?')
+                instrument_IDE = self.Read_Line()
+                if instrument_IDE != '':
+                    instrument_IDE = instrument_IDE.split(',')
+                    if len(instrument_IDE) == 4:
+                        if (maker == instrument_IDE[0]) and (name == instrument_IDE[1]):
+                            self.Set_Timeout(timeout)
+                            return port, instrument_IDE
+                self.Close()
+        self.Set_Timeout(timeout)
+        return None, None

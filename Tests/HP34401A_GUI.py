@@ -14,6 +14,7 @@ import RS232
 import pandas as pd
 import Settings
 import WebGui_TraceManager as WGTM
+import threading
 
 Setting_1 = Settings.Settings("HP34401A_Settings", Peter_WebGui_Path, None)
 """
@@ -72,6 +73,7 @@ def main_page():
                         DDC1.set_options(RS232_1.Get_Possible_Ports())
                     DDC1 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Ports(), function_to_call=DDC1_Function, width= 160)
                     DDC1.set_value(Setting_1.Get_setting("RS232_1_Port", RS232_1.Get_Port()))
+                    RS232_1.Set_Port(Setting_1.Get_setting("RS232_1_Port", RS232_1.Get_Port()))
                 with ui.row():
                     L2 = WGV.Create_Label_Right('Baud:', font_size= 20, width= 80)
                     def DDC2_Function(baud):
@@ -79,6 +81,7 @@ def main_page():
                         RS232_1.Set_Baud(baud)
                     DDC2 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Bauds(), function_to_call=DDC2_Function, width= 160)
                     DDC2.set_value(Setting_1.Get_setting("RS232_1_Baud", RS232_1.Get_Baud()))
+                    RS232_1.Set_Baud(Setting_1.Get_setting("RS232_1_Baud", RS232_1.Get_Baud()))
                 with ui.row():
                     L3 = WGV.Create_Label_Right('Parity:', font_size= 20, width= 80)
                     def DDC3_Function(parity):
@@ -86,6 +89,7 @@ def main_page():
                         RS232_1.Set_Parity(parity)
                     DDC3 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Paritys(), function_to_call=DDC3_Function, width= 160)
                     DDC3.set_value(Setting_1.Get_setting("RS232_1_Parity", RS232_1.Get_Parity()))
+                    RS232_1.Set_Parity(Setting_1.Get_setting("RS232_1_Parity", RS232_1.Get_Parity()))
                 with ui.row():
                     L4 = WGV.Create_Label_Right('Flow:', font_size= 20, width= 80)
                     def DDC3_Function(flow):
@@ -93,25 +97,47 @@ def main_page():
                         RS232_1.Set_Flow(flow)
                     DDC4 = WGV.Create_Dropdown_Card(options=RS232_1.Get_Possible_Flows(), function_to_call=DDC3_Function, width= 160)
                     DDC4.set_value(Setting_1.Get_setting("RS232_1_Flow", RS232_1.Get_Flow()))
+                    RS232_1.Set_Flow(Setting_1.Get_setting("RS232_1_Flow", RS232_1.Get_Flow()))
                 with ui.row():
                     def B5_Function():
                         Setting_1.Save_to_default_file()
                         if RS232_1.Open() == None:
                             L9.set_text('Connected')
+                            Communicator_1.Start()
                     B5 = WGV.Button(lambda: B5_Function(), name='Connect', width= 120,background_color = '#B12C2C')
                     def B6_Function():
                         if RS232_1.Close() == None:
                             L9.set_text('Not Connected')
+                            Communicator_1.Stop()
                     B6 = WGV.Button(lambda: B6_Function(), name='Disconnect', width= 120)
                 with ui.row():
                     L9 = WGV.Create_Label_Left('Not Connected', font_size= 20, width = 200)
 
             with WGV.Card(name= 'HP 34401A Find', width= 310, height= 200):
-                DDC_Test = WGV.Create_Dropdown_Card_With_Name(name= 'Test:', options= ['1', '2', '3'], text_width= 50, dropdown_width= 50)
+                def find():
+                    COM, IDE = RS232_1.Find_IDE('HEWLETT-PACKARD', '34401A')
+                    print(COM)
+                    print(IDE)
+                    if COM:
+                        DDC1.set_value(COM)
+                        Setting_1.Set_setting("RS232_1_Port", COM)
+                        L9.set_text('Connected')
+                        Communicator_1.Start()
+                        Lport2.set_text(COM)
+                        Lno2.set_text(IDE[2])
+                B_find = WGV.Button(lambda: threading.Thread(target=find, daemon=True).start(), name='Find', width= 120,background_color = '#B12C2C')
+                with ui.row():
+                    Lport1 = WGV.Create_Label_Right_Bold('Port: ', font_size= 20, width = 90)
+                    Lport2 = WGV.Create_Label_Left_Bold('', font_size= 20, width = 90)
+                with ui.row():
+                    Lno1 = WGV.Create_Label_Right_Bold('No: ', font_size= 20, width = 90)
+                    Lno2 = WGV.Create_Label_Left_Bold('', font_size= 20, width = 90)
 
+                
+        DDC_Test = WGV.Create_Dropdown_Card_With_Name(name= 'Test:', options= ['1', '2', '3'], text_width= 50, dropdown_width= 50)
 
         with ui.column().classes('gap-0 p-0 m-0'): # column with no spaceing
-            with WGV.Card(name= None, width= 1000, height= 200, background_color = "#000000"):
+            with WGV.Card(name= 'HP34401A', width= 1000, height= 200, background_color = "#000000"):
                 Display = WGV.Create_Label_Right_Bold('Hello!', font_size= 100, width = 900, height = 180, background_color = "#000000", color = "#DF9439")
             with WGV.Card(name= None, width= 1000, height= 200, background_color = "#808080"):
                 global Running
@@ -243,13 +269,13 @@ def main_page():
                         global Measure
                         Measure = chosen_measurement
                     DDC_Measure = WGV.Create_Dropdown_Card(options=['DC V', 'AC V', 'DC I', 'AC I', 'Ω 2W', 'Ω 4W', 'Freq', 'Period'], function_to_call=DDC_Measure_function, width= 120, background_color = "#2A2727")
-                    L_Resolution = WGV.Create_Label_Left('Resolution:', font_size= 20, width = 100)
                     def DDC_Resolution_function(chosen_resolution):
                         global Resolution
                         Resolution = chosen_resolution
-                    DDC_Resolution = WGV.Create_Dropdown_Card(options=['DEF', 'MIN', 'MAX'], function_to_call=DDC_Resolution_function, width= 100, background_color = "#2A2727")
+                    DDC_Resolution = WGV.Create_Dropdown_Card_With_Name(name= 'Resolution:',options=['DEF', 'MIN', 'MAX'], function_to_call=DDC_Resolution_function, text_width= 100, dropdown_width= 80, background_color = "#2A2727")
                 with ui.row():
-                    pass
+                    DDC_Trigger_Source = WGV.Create_Dropdown_Card_With_Name(name= 'Trigger Source:', options= ['Bus', 'Immediate', 'External'], text_width= 120, dropdown_width= 120, background_color = "#2A2727")
+                    Number_input1 = WGV.Number_input(name = 'Trigger count:', text_width = 110, number_width = 100, background_color = "#2A2727", default_value = 0)
                 
 
 
@@ -307,8 +333,8 @@ def main_page():
 
     
         
-    ui.timer(0.001, Communicator_1.Message_in_worker)
-    ui.timer(0.001, Communicator_1.Message_out_worker)
+    ui.timer(0.01, Communicator_1.Message_in_worker)
+    ui.timer(0.01, Communicator_1.Message_out_worker)
 
 
 ui.run()
