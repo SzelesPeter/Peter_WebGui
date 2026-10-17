@@ -255,7 +255,9 @@ def Create_Label_Center_Bold(text, font_size = Default_font_size, width = Defaul
         ''')
 
 class Number_input:
-    def __init__(self, name = None, text_width = Default_width, number_width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0):
+    def __init__(self, name = None, button_function = None, number_function = None, text_width = Default_width, number_width = Default_width, height = Default_height, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_value = 0, min = -1, max = 1):
+        self.min = min
+        self.max = max
 
         ui.add_css('''
             input[type=number]::-webkit-inner-spin-button,
@@ -288,26 +290,48 @@ class Number_input:
                         '''):
                     if name:
                         Create_Label_Right_Bold(text = name, width = text_width)
-                    self.Number_input_element = ui.number().props(
-                        'borderless'
-                    ).style(f'''
-                        flex: 1;
-                        height: {Number_to_Pixel(height-4)};
-                        width: {Number_to_Pixel(number_width)};
+                    if number_function != None:
+                        self.Number_input_element = ui.number(on_change =lambda e: self.validate(e.value, number_function)).props(
+                            'borderless'
+                        ).style(f'''
+                            flex: 1;
+                            height: {Number_to_Pixel(height-4)};
+                            width: {Number_to_Pixel(number_width)};
 
-                        background-color: {background_color};
-                        border: 0px solid {border_color};
-                        border-right: none;
-                        border-radius: 0;
+                            background-color: {background_color};
+                            border: 0px solid {border_color};
+                            border-right: none;
+                            border-radius: 0;
 
-                        font-size: {Number_to_Pixel(font_size)} !important;
-                        font-weight: bold !important;
-                        color: {border_color} !important;
+                            font-size: {Number_to_Pixel(font_size)} !important;
+                            font-weight: bold !important;
+                            color: {border_color} !important;
 
-                        padding-left: 12px;
-                        padding-top: 0px;
+                            padding-left: 12px;
+                            padding-top: 0px;
 
-                    ''')
+                        ''')
+                    else:
+                        self.Number_input_element = ui.number(min = min, max = max).props(
+                            'borderless'
+                        ).style(f'''
+                            flex: 1;
+                            height: {Number_to_Pixel(height-4)};
+                            width: {Number_to_Pixel(number_width)};
+
+                            background-color: {background_color};
+                            border: 0px solid {border_color};
+                            border-right: none;
+                            border-radius: 0;
+
+                            font-size: {Number_to_Pixel(font_size)} !important;
+                            font-weight: bold !important;
+                            color: {border_color} !important;
+
+                            padding-left: 12px;
+                            padding-top: 0px;
+
+                        ''')
 
                     self.Number_input_element.set_value(default_value)
         
@@ -352,7 +376,16 @@ class Number_input:
                     border-top: 2px solid {border_color};
                     border-radius: 0;
                 ''')
-
+            if button_function != None:
+                self.B1 = Button(lambda: self.validate(e.value, button_function), name='Set', width= 80, background_color = background_color)
+    def validate(self,value, function):
+        if value > self.max:
+            value = self.max
+            self.Number_input_element.set_value(self.max)
+        if value < self.min:
+            value = self.min
+            self.Number_input_element.set_value(self.min)
+        function(value)
 
 def Create_Radio_Button(function_to_call, options = [], font_size = Default_font_size, border_color = Default_border_color):
     return ui.radio(
@@ -365,7 +398,7 @@ def Create_Radio_Button(function_to_call, options = [], font_size = Default_font
         font-weight: bold;
     ''').props('dark')
 
-def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_width, height = Default_height, font_size = Default_font_size, color = Default_color, background_color = Default_background_color, border_color = Default_border_color, border_width = 2):
+def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_width, height = Default_height, font_size = Default_font_size, color = Default_color, background_color = Default_background_color, border_color = Default_border_color, border_width = 2, editable = False):
     # ---------- DROPDOWN CARD ----------
     ui.add_head_html(f'''
     <style>
@@ -417,6 +450,8 @@ def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_
             options=options,
             value=options[0],
             on_change=lambda e: function_to_call(e.value),
+            with_input=editable,
+            new_value_mode='add-unique',
         ).style(f'''
             width: {Number_to_Pixel(width)} !important;
             height: {Number_to_Pixel(height)} !important;
@@ -446,12 +481,12 @@ def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_
 
     return element
 
-def Create_Dropdown_Card_With_Name(name, function_to_call= None, options = [], text_width = Default_width, dropdown_width = Default_width, font_size = Default_font_size, color = Default_border_color, background_color = Default_background_color, border_color = Default_border_color):
+def Create_Dropdown_Card_With_Name(name, function_to_call= None, options = [], text_width = Default_width, dropdown_width = Default_width, font_size = Default_font_size, color = Default_border_color, background_color = Default_background_color, border_color = Default_border_color, editable = False):
     
     with Card(width= text_width+dropdown_width+14, height= 44,background_color= background_color,padding= 0,border_width= 2):
         with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
             Create_Label_Right_Bold(text = name, font_size = font_size, width = text_width, height = 40, color = color, background_color = None)
-            return Create_Dropdown_Card(function_to_call = function_to_call, options = options, width = dropdown_width, height = 32, font_size = font_size, color = color, background_color = background_color, border_color = border_color, border_width = 0)
+            return Create_Dropdown_Card(function_to_call = function_to_call, options = options, width = dropdown_width, height = 32, font_size = font_size, color = color, background_color = background_color, border_color = border_color, border_width = 0, editable = editable)
 
 def Create_Grid(data, width=Default_box_width, height=Default_box_height, editable = False, header_color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
 

@@ -2,4 +2,11 @@ Name,Value
 RS232_1_Port,ttyUSB1
 RS232_1_Baud,9600
 RS232_1_Parity,NONE
-RS232_1_Flow,Dsr/Dtr
+RS232_1_Flow,NONE
+RS232_1_Timeout,0.01
+Instrument_1_Measurement,DC V
+Instrument_1_Range,AUTO
+Instrument_1_Resolution,DEF
+Instrument_1_Trigger_Source,IMMEDIATE
+Instrument_1_Trigger_Count,1
+Instrument_Finder_1_No,0

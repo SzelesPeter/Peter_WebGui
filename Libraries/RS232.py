@@ -7,14 +7,14 @@ Windows = False
 
         
 class RS232:
-    def __init__(self):
+    def __init__(self, Port: str="ttyS1", Baud: str="9600", Flow: str="NONE", Parity: str="NONE", Timeout: float=1):
 
         self.ser = serial.Serial()
-        self.Port = "ttyS1"
-        self.Baud = "9600" #["50", "75", "110", "134", "150", "200", "300", "600", "1200", "1800", "2400", "4800", "9600", "19200", "28800", "38400", "57600", "76800", "115200", "230400", "460800", "576000", "921600"]
-        self.Flow = "NONE" #["NONE", "Dsr/Dtr", "Rts/Cts", "Xon/Xoff"]
-        self.Parity = "NONE" #["NONE", "ODD", "EVEN"]
-        self.Timeout = 0.01
+        self.Port = Port
+        self.Baud = Baud #["50", "75", "110", "134", "150", "200", "300", "600", "1200", "1800", "2400", "4800", "9600", "19200", "28800", "38400", "57600", "76800", "115200", "230400", "460800", "576000", "921600"]
+        self.Flow = Flow #["NONE", "Dsr/Dtr", "Rts/Cts", "Xon/Xoff"]
+        self.Parity = Parity #["NONE", "ODD", "EVEN"]
+        self.Timeout = Timeout
 
     def Get_Port(self):
         return self.Port
@@ -153,7 +153,7 @@ class RS232:
         else:
             return ""
 
-    def Find_IDE(self, maker, name):
+    def Find_IDE(self, maker, name, no):
         self.Close()
         Com_ports = self.Get_Possible_Ports()
         timeout = self.Get_Timeout()
@@ -166,9 +166,97 @@ class RS232:
                 if instrument_IDE != '':
                     instrument_IDE = instrument_IDE.split(',')
                     if len(instrument_IDE) == 4:
-                        if (maker == instrument_IDE[0]) and (name == instrument_IDE[1]):
-                            self.Set_Timeout(timeout)
-                            return port, instrument_IDE
+                        if no != None:
+                            if (maker == instrument_IDE[0]) and (name == instrument_IDE[1]) and (str(no) == instrument_IDE[2]):
+                                self.Set_Timeout(timeout)
+                                self.Close()
+                                return port, instrument_IDE
+                        else:
+                            if (maker == instrument_IDE[0]) and (name == instrument_IDE[1]):
+                                self.Set_Timeout(timeout)
+                                self.Close()
+                                return port, instrument_IDE
                 self.Close()
         self.Set_Timeout(timeout)
         return None, None
+
+
+from nicegui import ui
+import WebGui_Visuals as WGV
+
+class RS232_GUI:
+    def __init__(self,name: str, RS232: RS232):
+        self.RS232 = RS232
+        with WGV.Card(name= name, width= 310, height= 450):
+            with ui.row(): # column with no spaceing:
+                self.L_Port = WGV.Create_Label_Right('Port:', font_size= 20, width= 80)
+                self.DDC_Port = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Ports(), function_to_call=self.__DDC_Port_Function_internal, width= 160)
+                self.DDC_Port.set_value(self.RS232.Get_Port())
+            with ui.row():
+                self.L_Baud = WGV.Create_Label_Right('Baud:', font_size= 20, width= 80)
+                self.DDC_Baud = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Bauds(), function_to_call=self.__DDC_Baud_Function_internal, width= 160)
+                self.DDC_Baud.set_value(self.RS232.Get_Baud())
+            with ui.row():
+                self.L_Parity = WGV.Create_Label_Right('Parity:', font_size= 20, width= 80)
+                self.DDC_Parity = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Paritys(), function_to_call=self.__DDC_Parity_Function_internal, width= 160)
+                self.DDC_Parity.set_value(self.RS232.Get_Parity())
+            with ui.row():
+                self.L_Flow = WGV.Create_Label_Right('Flow:', font_size= 20, width= 80)
+                self.DDC_Flow = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Flows(), function_to_call=self.__DDC_Flow_Function_internal, width= 160)
+                self.DDC_Flow.set_value(self.RS232.Get_Flow())
+            with ui.row():
+                self.L_Timeout = WGV.Create_Label_Right('Timeout:', font_size= 20, width= 80)
+                self.NI_Timeout = WGV.Number_input(number_function = self.__NI_Timeout_Function_internal, text_width = 0, number_width = 100, default_value = self.RS232.Get_Timeout(), min = 0, max = 9999)
+            with ui.row():
+                self.B_Connect = WGV.Button(lambda: self.B_Connect_Function(), name='Connect', width= 120,background_color = '#B12C2C')
+                self.B_Disconnect = WGV.Button(lambda: self.B_Disconnect_Function(), name='Disconnect', width= 120)
+            with ui.row():
+                self.L_Connected = WGV.Create_Label_Left('Not Connected', font_size= 20, width = 200)
+                
+    def Update_DDC_Port_list(self):
+        self.DDC_Port.set_options(self.RS232.Get_Possible_Ports())
+
+    def __DDC_Port_Function_internal(self, port: str):
+        self.RS232.Set_Port(port)
+        self.Update_DDC_Port_list()
+
+    def __DDC_Baud_Function_internal(self, baud: str):
+        self.RS232.Set_Baud(baud)
+
+    def __DDC_Parity_Function_internal(self, parity: str):
+        self.RS232.Set_Parity(parity)
+
+    def __DDC_Flow_Function_internal(self, flow: str):
+        self.RS232.Set_Flow(flow)
+
+    def __NI_Timeout_Function_internal(self, timeout: float):
+        self.RS232.Set_Timeout(timeout)
+
+    def DDC_Port_Function(self, port: str):
+        self.RS232.Set_Port(port)
+        self.Update_DDC_Port_list()
+        self.DDC_Port.set_value(port)
+
+    def DDC_Baud_Function(self, baud: str):
+        self.RS232.Set_Baud(baud)
+        self.DDC_Baud.set_value(baud)
+
+    def DDC_Parity_Function(self, parity: str):
+        self.RS232.Set_Parity(parity)
+        self.DDC_Parity.set_value(parity)
+
+    def DDC_Flow_Function(self, flow: str):
+        self.RS232.Set_Flow(flow)
+        self.DDC_Flow.set_value(flow)
+
+    def NI_Timeout_Function(self, timeout: float):
+        self.RS232.Set_Timeout(timeout)
+        self.NI_Timeout.Number_input_element.set_value(timeout)
+
+    def B_Connect_Function(self):
+        if self.RS232.Open() == None:
+            self.L_Connected.set_text('Connected')
+
+    def B_Disconnect_Function(self):
+        if self.RS232.Close() == None:
+            self.L_Connected.set_text('Not Connected')

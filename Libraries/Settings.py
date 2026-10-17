@@ -31,7 +31,7 @@ class Settings:
         return(value)
     
     def Set_setting(self, name, value):
-        self.df = self.df.copy()
+        #self.df = self.df.copy()
         mask = self.df["Name"] == name
         self.df.loc[mask, "Value"] = value
 
@@ -39,13 +39,13 @@ class Settings:
         self.df.to_csv(os.path.join(self.path, self.name + ".csv"), sep=",", index=False)
 
     def Read_from_default_file(self):
-        self.df = pd.read_csv(os.path.join(self.path, self.name + ".csv"), sep=",", index=False)
+        self.df = pd.read_csv(os.path.join(self.path, self.name + ".csv"), sep=",")
 
     def Save_to_file(self, name, path = here):
         self.df.to_csv(os.path.join(path, name + ".csv"), sep=",", index=False)
 
-    def Read_from_default_file(self, name, path = here):
-        self.df = pd.read_csv(os.path.join(path, name + ".csv"), sep=",", index=False)
+    def Read_from_file(self, name, path = here):
+        self.df = pd.read_csv(os.path.join(path, name + ".csv"), sep=",")
 
 """
 Setting_1 = Settings("Settings", here, None)

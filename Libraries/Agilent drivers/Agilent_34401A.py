@@ -83,8 +83,17 @@ class SCPI_Message:
     
 
 class Instrument:
-    def __init__(self, Interface):
+    def __init__(self, Interface, Measurement = 'DC V', Range = 'AUTO', Resolution = 'DEF', Trigger_Source = 'IMMediate', Trigger_Count = 'INFinity'):
         self.Interface = Interface
+        self.Vendor = 'HEWLETT-PACKARD'
+        self.Model = '34401A'
+
+        self.Measurement = Measurement
+        self.Range = Range
+        self.Resolution = Resolution
+        self.Trigger_Source = Trigger_Source
+        self.Trigger_Count = Trigger_Count
+
 
         # Measurement Commands
         self.MEASure_VOLTage_DC = SCPI_Message(self, 'MEASure:VOLTage:DC') # [{<range>|AUTO |MIN|MAX|DEF}[,<resolution>|MIN|MAX|DEF}],]
@@ -230,73 +239,124 @@ class Instrument:
     def Remote(self):
         self.SYSTem_REMote.Write()
 
-    def Measure_Chanel(self, measurement, Target_Function, range = 'AUTO', resolution = 'DEF'):
-        if ('VOLTage_DC' == measurement):
-            self.MEASure_VOLTage_DC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('VOLTage_AC' == measurement):
-            self.MEASure_VOLTage_AC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('RESistance' == measurement):
-            self.MEASure_RESistance.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('FRESistance' == measurement):
-            self.MEASure_FRESistance.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('CURRent_DC' == measurement):
-            self.MEASure_CURRent_DC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('CURRent_AC' == measurement):
-            self.MEASure_CURRent_AC.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('FREQuency' == measurement):
-            self.MEASure_FREQuency.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('PERiod' == measurement):
-            self.MEASure_PERiod.Read(Target_Function, range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('CONTinuity' == measurement):
+    def Local(self):
+        self.SYSTem_LOCal.Write()
+
+    def Get_Possoble_Measurement(self):
+        return ['DC V', 'AC V', 'Ω 2W', 'Ω 4W', 'DC I', 'AC I', 'Freq', 'Period', 'Cont', 'Diode']
+
+    def Get_Sufix(self):
+        measurements = ['DC V', 'AC V', 'Ω 2W', 'Ω 4W', 'DC I', 'AC I', 'Freq', 'Period', 'Cont', 'Diode']
+        sufixes = ['V', 'V', 'Ω', 'Ω', 'A', 'A', 'Hz', 's', 'Ω', 'V']
+        for i, m in enumerate(measurements):
+            if self.Measurement == m:
+                return sufixes[i]
+
+    def Set_Measurement(self, measurement):
+        self.Measurement = measurement
+
+    def Get_Possoble_Range(self):
+            return ['AUTO', 'MIN', 'MAX', 'DEF']
+    
+    def Set_Range(self, range):
+        self.Range = range
+
+    def Get_Possoble_Resolution(self):
+        return ['MIN', 'MAX', 'DEF']
+    
+    def Set_Resolution(self, resolution):
+        self.Resolution = resolution
+
+    def Measure_Chanel(self, Target_Function):
+        if ('DC V' == self.Measurement):
+            self.MEASure_VOLTage_DC.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('AC V' == self.Measurement):
+            self.MEASure_VOLTage_AC.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Ω 2W' == self.Measurement):
+            self.MEASure_RESistance.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Ω 4W' == self.Measurement):
+            self.MEASure_FRESistance.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('DC I' == self.Measurement):
+            self.MEASure_CURRent_DC.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('AC I' == self.Measurement):
+            self.MEASure_CURRent_AC.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Freq' == self.Measurement):
+            self.MEASure_FREQuency.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Period' == self.Measurement):
+            self.MEASure_PERiod.Read(Target_Function, self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Cont' == self.Measurement):
             self.MEASure_CONTinuity.Read(Target_Function)
-        elif ('DIODe' == measurement):
+        elif ('Diode' == self.Measurement):
             self.MEASure_DIODe.Read(Target_Function)
 
-    def Configure_Chanels(self, measurement, range = 'AUTO', resolution = 'DEF'):
-        if ('VOLTage_DC' == measurement):
-            self.CONFigure_VOLTage_DC.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('VOLTage_AC' == measurement):
-            self.CONFigure_VOLTage_AC.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('RESistance' == measurement):
-            self.CONFigure_RESistance.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('FRESistance' == measurement):
-            self.CONFigure_FRESistance.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('CURRent_DC ' == measurement):
-            self.CONFigure_CURRent_DC.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('CURRent_AC' == measurement):
-            self.CONFigure_CURRent_AC.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('FREQuency' == measurement):
-            self.CONFigure_FREQuency.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('PERiod' == measurement):
-            self.CONFigure_PERiod.Write(range, resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
-        elif ('CONTinuity' == measurement):
+    def Configure_Chanels(self):
+        if ('DC V' == self.Measurement):
+            self.CONFigure_VOLTage_DC.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('AC V' == self.Measurement):
+            self.CONFigure_VOLTage_AC.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Ω 2W' == self.Measurement):
+            self.CONFigure_RESistance.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Ω 4W' == self.Measurement):
+            self.CONFigure_FRESistance.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('DC I' == self.Measurement):
+            self.CONFigure_CURRent_DC.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('AC I' == self.Measurement):
+            self.CONFigure_CURRent_AC.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Freq' == self.Measurement):
+            self.CONFigure_FREQuency.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Period' == self.Measurement):
+            self.CONFigure_PERiod.Write(self.Range, self.Resolution) # [{<range>|AUTO|MIN|MAX|DEF} [,<resolution>|MIN|MAX|DEF}],]
+        elif ('Cont' == self.Measurement):
             self.CONFigure_CONTinuity.Write()
-        elif ('DIODe' == measurement):
+        elif ('Diode' == self.Measurement):
             self.CONFigure_DIODe.Write()
 
-    def Scan_Start(self, source = 'IMMediate', count = 'INFinity'):
-            self.TRIGger_SOURce.Write(source)
-            self.TRIGger_COUNt.Write(count)
-            self.INITiate.Write()
+    def Get_Possoble_Trigger_Source(self):
+            return ['BUS', 'IMMEDIATE', 'EXTERNAL']
+    
+    def Set_Trigger_Source(self, trigger_source):
+        self.Trigger_Source = trigger_source
+
+    def Get_Possoble_Trigger_Count(self):
+        return ['MIN', 'MAX', 'INFINITE']
+    
+    def Set_Trigger_Count(self, trigger_count):
+        self.Trigger_Count = trigger_count
+
+    def Scan_Configure(self):
+        self.Configure_Chanels()
+        self.TRIGger_SOURce.Write(self.Trigger_Source)
+        self.TRIGger_COUNt.Write(self.Trigger_Count)
+
+    def Scan_Start(self):
+        self.INITiate.Write()
 
     def Scan_Trigger(self):
         self.TRG.Write()
+
+    def Scan_Read(self, Target_Function):
+        self.REAd.Read(Target_Function)
     
     def Scan_Data_Count(self, Target_Function):
         self.DATA_POINts.Read(Target_Function),
     
     def Scan_Data_Remove_All(self, Target_Function):
-        if(self.Scan_Data_Exists()):
             self.FETCh.Read(Target_Function)
-    
-    def Scan_Data_Exists(self):
-        if 0 == int(self.Scan_Data_Count()):
-           return(False)
-        else:
-            return(True)
+
+    def Text_Write(self, text):
+        self.DISPlay_TEXT.Write(text)
+
+    def Text_Clear(self):
+        self.DISPlay_TEXT_CLEar.Write()
 
     def Beep(self):
-            self.SYSTem_BEEPer.Write()
+        self.SYSTem_BEEPer.Write()
+
+    def Display(self, on):
+        if on:
+            self.DISPlay.Set()
+        else:
+            self.DISPlay.Reset()
 
 
 # ==================================== v TEST v ===========================================================================
