@@ -31,7 +31,7 @@ class Settings:
         return(value)
     
     def Set_setting(self, name, value):
-        #self.df = self.df.copy()
+        self.df = self.df.copy()
         mask = self.df["Name"] == name
         self.df.loc[mask, "Value"] = value
 

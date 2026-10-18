@@ -482,7 +482,6 @@ def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_
     return element
 
 def Create_Dropdown_Card_With_Name(name, function_to_call= None, options = [], text_width = Default_width, dropdown_width = Default_width, font_size = Default_font_size, color = Default_border_color, background_color = Default_background_color, border_color = Default_border_color, editable = False):
-    
     with Card(width= text_width+dropdown_width+14, height= 44,background_color= background_color,padding= 0,border_width= 2):
         with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
             Create_Label_Right_Bold(text = name, font_size = font_size, width = text_width, height = 40, color = color, background_color = None)
@@ -550,6 +549,104 @@ def Create_Grid(data, width=Default_box_width, height=Default_box_height, editab
         height: {Number_to_Pixel(height)};
         border: 2px solid {border_color};
     ''')
+
+class Grid:
+    def __init__(
+        self,
+        data,
+        width=Default_box_width,
+        height=Default_box_height,
+        editable=False,
+        header_color=Default_color,
+        background_color=Default_background_color,
+        border_color=Default_border_color
+    ):
+        self.Editable = editable
+        self.Grid_element = Create_Grid(
+            data,
+            width,
+            height,
+            editable,
+            header_color,
+            background_color,
+            border_color
+        )
+
+    def update_from_df(self, df):
+        self.Grid_element.options['columnDefs'] = [
+            {
+                'field': str(col),
+                'editable': self.Editable
+            }
+            for col in df.columns
+        ]
+
+        self.Grid_element.options['rowData'] = df.to_dict('records')
+        self.Grid_element.update()
+
+    async def data_to_df(self):
+        grid_data = await self.Grid_element.get_client_data(
+            timeout=5,
+            method='all_unsorted'
+        )
+        # Convert the grid data to a pandas DataFrame
+        return pd.DataFrame(grid_data)
+    
+
+    def add_column(self, column_name, default_value=None):
+        """Add a column to the grid, optionally filling it with a default value."""
+        column_defs = self.Grid_element.options['columnDefs']
+        row_data = self.Grid_element.options['rowData']
+
+        if any(col['field'] == str(column_name) for col in column_defs):
+            raise ValueError(f"Column '{column_name}' already exists.")
+
+        # Add the new column definition
+        column_defs.append({
+            'field': str(column_name),
+            'editable': self.Editable
+        })
+
+        # Populate the new column in every existing row
+        for row in row_data:
+            row[str(column_name)] = default_value
+
+        self.Grid_element.options['columnDefs'] = column_defs
+        self.Grid_element.options['rowData'] = row_data
+
+    def add_row(self, row=None):
+        """Add a row as a dictionary, or an empty row if no data is provided."""
+        column_defs = self.Grid_element.options['columnDefs']
+        row_data = self.Grid_element.options['rowData']
+
+        column_names = [col['field'] for col in column_defs]
+
+        if row is None:
+            row = {}
+
+        # Ensure the new row contains every column
+        new_row = {
+            column: row.get(column, None)
+            for column in column_names
+        }
+
+        # Reject unknown columns to catch potential typos
+        unknown_columns = set(row.keys()) - set(column_names)
+        if unknown_columns:
+            raise ValueError(
+                f"Unknown column(s): {', '.join(map(str, unknown_columns))}"
+            )
+
+        row_data.append(new_row)
+
+        self.Grid_element.options['rowData'] = row_data
+
+        self.Grid_element.run_grid_method(
+        'ensureIndexVisible',
+        len(self.Grid_element.options['rowData']) - 1,
+        'bottom'
+)
+    
 
 
 class Card:

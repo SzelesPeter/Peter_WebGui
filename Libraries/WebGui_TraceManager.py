@@ -9,6 +9,8 @@ from math import sin
 import numpy as np
 import random
 
+import sys, os
+
 
 class Chart:
     def __init__(self, name = '', xaxis_name = '', yaxis_name = '', width=WGV.Default_box_width, height=WGV.Default_box_height, background_color = WGV.Default_page_color, grid_color = WGV.Default_background_color, text_color = WGV.Default_border_color):
@@ -22,8 +24,8 @@ class Chart:
                 'textStyle': {'color': text_color}
             },
             'legend': {
-                'top': 50,
-                'left': 50,
+                'top': 20,
+                'left': 70,
                 'textStyle': {'color': text_color}
             },
 
@@ -84,7 +86,7 @@ class Chart:
             'series': [],
         }
 
-        self.Echart_element = ui.echart(self.Options).style(f'width: {width}; height: {height};')
+        self.Echart_element = ui.echart(self.Options).style(f'width: {WGV.Number_to_Pixel(width)}; height: {WGV.Number_to_Pixel(height)};')
 
     def set_xaxis_range(self, min: int = None, max: int = None):
         if (min != None):
@@ -179,6 +181,110 @@ class Chart:
                             for point in trace['data']:
                                 point[0] = point[0] + value
             self.Echart_element.update()
+
+    def update_from_df(self, df):
+        self.remove_all_traces()
+
+        # Every odd column (0-based index) is a time column,
+        # followed by its corresponding voltage column.
+        for i in range(0, len(df.columns) - 1, 2):
+            time_col = df.columns[i]
+            voltage_col = df.columns[i + 1]
+
+            valid = df[time_col].notna() & df[voltage_col].notna()
+
+            data = [
+                [x, y]
+                for x, y in zip(
+                    df.loc[valid, time_col],
+                    df.loc[valid, voltage_col]
+                )
+            ]
+
+            self.add_trace(
+                name=str(voltage_col),
+                data=data,
+                digital=False,
+                symbol='none',
+                lineWidth=2
+            )
+
+class Manager_Basic:
+    def __init__(self, name = '', save_path = '', save_name = '', load_path = '', load_name = '', xaxis_name = '', yaxis_name = '', width=WGV.Default_box_width, height=WGV.Default_box_height, background_color = WGV.Default_page_color, grid_color = WGV.Default_background_color, text_color = WGV.Default_border_color):
+        with WGV.Card(name= name, width=width, height=height):
+            self.save_path = save_path
+            self.save_name = save_name
+            self.load_path = load_path
+            self.load_name = load_name
+            self.df = pd.DataFrame()
+            self.Chart_1 = Chart(name = '', xaxis_name= 'X', yaxis_name= 'Y', width=width-40, height=height/2-50)
+            self.Grid_1 = WGV.Grid(data=self.df,width= 960,height=height/2-250, editable = True)
+
+            with ui.row():
+                B_update = WGV.Button(lambda: self.Update_Data_from_Grid(), name='Update', width= 120)
+                WGV.Create_Label_Left_Bold(text = 'Trace name:', width = 90)
+                self.TI_new_trace = WGV.Text_input(width = 200)
+                B_new_trace = WGV.Button(lambda: self.new_trace(self.TI_new_trace.Text_input_element.value), name='New Trace', width= 160)
+                B_new_row = WGV.Button(lambda: self.new_row(), name='New Row', width= 160)
+
+            with ui.row():
+                WGV.Create_Label_Left_Bold(text = 'Save path:', width = 80)
+                self.TI_save_path = WGV.Text_input(width = 340)
+                self.TI_save_path.Text_input_element.value = self.save_path
+                WGV.Create_Label_Left_Bold(text = 'Save name:', width = 90)
+                self.TI_save_name = WGV.Text_input(width = 200)
+                self.TI_save_name.Text_input_element.value = self.save_name
+                B_save = WGV.Button(lambda: self.Save_Data_to_File(), name='Save to file', width= 170)
+            with ui.row():
+                WGV.Create_Label_Left_Bold(text = 'Load path:', width = 80)
+                self.TI_load_path = WGV.Text_input(width = 340)
+                self.TI_load_path.Text_input_element.value = self.load_path
+                WGV.Create_Label_Left_Bold(text = 'Load name:', width = 90)
+                self.TI_load_name = WGV.Text_input(width = 200)
+                self.TI_load_name.Text_input_element.value = self.load_name
+                B_load = WGV.Button(lambda: self.Load_Data_from_File(), name='Load from file', width= 170)
+
+    def new_trace(self, name):
+        self.df[name+'_t'] = None
+        self.df[name] = None
+        self.Grid_1.update_from_df(self.df)
+    def new_row(self):
+        new_row = {column: None for column in self.df.columns}
+        self.df.loc[len(self.df)] = new_row
+        self.Grid_1.update_from_df(self.df)
+    async def Update_Data_from_Grid(self):
+        self.df = await self.Grid_1.data_to_df()
+        self.Chart_1.update_from_df(self.df)
+    def Save_Data_to_File(self):
+        self.save_path = self.TI_save_path.Text_input_element.value
+        self.save_name = self.TI_save_name.Text_input_element.value
+        self.df.to_csv(os.path.join(self.save_path, self.save_name + ".csv"), sep=",", index=False)
+    def Load_Data_from_File(self):
+        self.load_path = self.TI_load_path.Text_input_element.value
+        self.load_name = self.TI_load_name.Text_input_element.value
+        self.df = pd.read_csv(os.path.join(self.load_path, self.load_name + ".csv"), sep=",")
+        self.Chart_1.update_from_df(self.df)
+        self.Grid_1.update_from_df(self.df)
+
+    def Add_measurement_point(self, name, x, y):
+        if name not in self.df.columns:
+            self.df[name+'_t'] = None
+            self.df[name] = None
+        empty_rows = self.df[name+'_t'].isna()
+        if empty_rows.any():
+            # Overwrite the first empty value
+            idx = self.df.index[empty_rows][0]
+            self.df.loc[idx, name+'_t'] = x
+            self.df.loc[idx, name] = y
+        else:
+            # Create a new row
+            new_row = {column: None for column in self.df.columns}
+            new_row[name+'_t'] = x
+            new_row[name] = y
+            self.df.loc[len(self.df)] = new_row
+
+        self.Chart_1.update_from_df(self.df)
+        self.Grid_1.update_from_df(self.df)
 
 
 """

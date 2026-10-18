@@ -6,7 +6,11 @@ RS232_1_Flow,NONE
 RS232_1_Timeout,0.01
 Instrument_1_Measurement,DC V
 Instrument_1_Range,AUTO
-Instrument_1_Resolution,DEF
+Instrument_1_Resolution,MAX
 Instrument_1_Trigger_Source,IMMEDIATE
 Instrument_1_Trigger_Count,1
 Instrument_Finder_1_No,0
+MB_test_save_path,/home/peter/Documents/Python/Projects/Peter_WebGui/
+MB_test_save_name,data2
+MB_test_load_path,/home/peter/Documents/Python/Projects/Peter_WebGui/
+MB_test_load_name,data

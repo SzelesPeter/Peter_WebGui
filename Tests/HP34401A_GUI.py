@@ -14,8 +14,9 @@ import Communicator
 import RS232
 import pandas as pd
 import Settings
-import WebGui_TraceManager as WGTM
+import WebGui_TraceManager as TM
 import threading
+
 
 Setting_1 = Settings.Settings("HP34401A_Settings", Peter_WebGui_Path, None)
 
@@ -29,10 +30,10 @@ RS232_1 = RS232.RS232(Setting_1.Get_setting("RS232_1_Port", "ttyS1"),
 
 def G10_Add_New_Line(time_request, time_out, data_out, time_in, data_in, messages_out):
     df.loc[len(df)] = [time_request, time_out, data_out, time_in, data_in, messages_out]
-    G10.options['rowData'] = df.to_dict('records')
-    G10.run_grid_method(
+    G10.Grid_element.options['rowData'] = df.to_dict('records')
+    G10.Grid_element.run_grid_method(
     'ensureIndexVisible',
-    len(G10.options['rowData']) - 1,
+    len(G10.Grid_element.options['rowData']) - 1,
     'bottom'
 )
 
@@ -122,9 +123,9 @@ class Instrument_Finder:
 
 
 Running = False
-
-data = []
-i = 1
+i = 0
+sweep_thread = None
+wait = False
 
 @ui.page('/')
 def main_page():
@@ -180,55 +181,71 @@ def main_page():
                     with ui.row():
                         B_Meas = WGV.Button(lambda: Reading_value_single(), name='Measure', width= 100, background_color = "#B12C2C")
                         DDC_Measurement = WGV.Create_Dropdown_Card(options=Instrument_1.Get_Possoble_Measurement(), function_to_call=Instrument_1.Set_Measurement, width= 120, background_color = "#2A2727")
-                        DDC_Measurement.set_value(Instrument_1.Measurement)
-                        DDC_Range = WGV.Create_Dropdown_Card_With_Name(name= 'Range:',options=Instrument_1.Get_Possoble_Range(), function_to_call=Instrument_1.Set_Range, text_width= 100, dropdown_width= 80, background_color = "#2A2727", editable = True)
-                        if Instrument_1.Range not in DDC_Range.options:
-                            DDC_Range.options.append(Instrument_1.Range)
-                        DDC_Range.set_value(Instrument_1.Range)
+                        DDC_Measurement.set_value(Instrument_1.Measurement.upper())
+                        DDC_Range = WGV.Create_Dropdown_Card_With_Name(name= 'Range:',options=Instrument_1.Get_Possoble_Range(), function_to_call=Instrument_1.Set_Range, text_width= 70, dropdown_width= 80, background_color = "#2A2727", editable = True)
+                        if Instrument_1.Range.upper() not in DDC_Range.options:
+                            DDC_Range.options.append(Instrument_1.Range.upper())
+                        DDC_Range.set_value(Instrument_1.Range.upper())
                         DDC_Resolution = WGV.Create_Dropdown_Card_With_Name(name= 'Resolution:',options=Instrument_1.Get_Possoble_Resolution(), function_to_call=Instrument_1.Set_Resolution, text_width= 100, dropdown_width= 80, background_color = "#2A2727", editable = True)
-                        if Instrument_1.Resolution not in DDC_Resolution.options:
-                            DDC_Resolution.options.append(Instrument_1.Resolution)
-                        DDC_Resolution.set_value(Instrument_1.Resolution)
+                        if Instrument_1.Resolution.upper() not in DDC_Resolution.options:
+                            DDC_Resolution.options.append(Instrument_1.Resolution.upper())
+                        DDC_Resolution.set_value(Instrument_1.Resolution.upper())
                     with ui.row():
                         B_Start = WGV.Button(lambda: B_Start_Function(), name='START', width= 80, background_color = "#DF9439", border_color = '#2A2727', text_color = "#2A2727")
                         B_Stop = WGV.Button(lambda: B_Stop_Function(), name='STOP', width= 80, background_color = "#F5F5F5", border_color = '#2A2727', text_color = "#2A2727")
                         DDC_Trigger_Source = WGV.Create_Dropdown_Card_With_Name(name= 'Trigger Source:', options=Instrument_1.Get_Possoble_Trigger_Source(), function_to_call=Instrument_1.Set_Trigger_Source, text_width= 120, dropdown_width= 140, background_color = "#2A2727")
-                        DDC_Trigger_Source.set_value(Instrument_1.Trigger_Source)
+                        DDC_Trigger_Source.set_value(Instrument_1.Trigger_Source.upper())
                         DDC_Trigger_Count = WGV.Create_Dropdown_Card_With_Name(name= 'Trigger Count:', options=Instrument_1.Get_Possoble_Trigger_Count(), function_to_call=Instrument_1.Set_Trigger_Count, text_width= 120, dropdown_width= 120, background_color = "#2A2727", editable = True)
-                        if Instrument_1.Trigger_Count not in DDC_Trigger_Count.options:
-                            DDC_Trigger_Count.options.append(Instrument_1.Trigger_Count)
-                        DDC_Trigger_Count.set_value(Instrument_1.Trigger_Count)
+                        if Instrument_1.Trigger_Count.upper() not in DDC_Trigger_Count.options:
+                            DDC_Trigger_Count.options.append(Instrument_1.Trigger_Count.upper())
+                        DDC_Trigger_Count.set_value(Instrument_1.Trigger_Count.upper())
+                    with ui.row():
+                        WGV.Create_Label_Left_Bold(text = 'For continous readout set Trigger Source: IMMEDIATE, Triger Count: 1.', width = 600, color='#000000')
+            
+            with WGV.Card(name= 'Sweep', width=1000, height=150):
+                with ui.row():
 
-            with WGV.Card(name= 'Charts', width=1000, height=440):
-                with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
-                    chart1 = WGTM.Chart(name = 'Chart 1', xaxis_name= 'X', yaxis_name= 'Y')
-
-            with WGV.Card(name= 'Test', width= 1000, height= 400):
-                L_Test = WGV.Create_Label_Left('Not Tested', font_size= 20, width = 200)
-                Running = False
-                def Reading_value2(text):
-                    global Running
-                    L_Test.set_text(text)
-                    if text != 'Waiting':
+                    def sweep():
+                        global Running
                         global i
-                        data.append([i, float(text)])
+                    
+                        if Running and i < NI_Lenght.Number_input_element.value:
+                            Instrument_1.Scan_Read(save_red_data)
+                            time.sleep(NI_Delay.Number_input_element.value)
+                        else:
+                            Running = False
+                            print("Sweep finished")
+
+                    def start_sweep():
+                        global sweep_thread, Running, i
+                        i = 0
+                        if sweep_thread is not None and sweep_thread.is_alive():
+                            return  # Prevent starting a second sweep
+                        Instrument_1.Remote()
+                        Instrument_1.Beep()
+                        Instrument_1.Scan_Configure()
+                        Running = True
+                        sweep_thread = threading.Thread(target=sweep, daemon=True)
+                        sweep_thread.start()
+
+                    def save_red_data(text):
+                        global i
+                        MB_test.Add_measurement_point(Trace_Name.Text_input_element.value, i, float(text))
                         i = i + 1
-                        chart1.add_trace('Test', data, digital= False)
-                        chart1.set_xaxis_range()
-                        chart1.set_yaxis_range()
-                    if Running:
-                        Instrument_1.Measure_Chanel('VOLTage_DC', Reading_value2, range = 'AUTO', resolution = 'DEF') #resolution = 'MIN'   resolution = 'DEF'
-                def B_Test_Function2():
-                    global Running
-                    Instrument_1.Remote()
-                    Instrument_1.Beep()
-                    Running = True
-                    Reading_value2('Waiting')
-                def B_Stop_Function2():
-                    global Running
-                    Running = False
-                B_Test = WGV.Button(lambda: B_Test_Function2(), name='Test', width= 120)
-                B_Stop = WGV.Button(lambda: B_Stop_Function2(), name='Stop', width= 120)
+                        sweep()
+                            
+                    B_Start = WGV.Button(lambda: start_sweep(), name='START', width= 80, background_color = "#DF9439", border_color = "#FFFFFF", text_color = "#FFFFFF")
+                    B_Stop = WGV.Button(lambda: B_Stop_Function(), name='STOP', width= 80, background_color = "#F5F5F5", border_color = '#2A2727', text_color = "#2A2727")
+
+                    WGV.Create_Label_Left_Bold(text = 'Trace Name:', width = 100)
+                    Trace_Name = WGV.Text_input(width = 200)
+                with ui.row():
+                    NI_Delay = WGV.Number_input(name = 'Measurement delay: ', text_width = 160, number_width = 100, default_value = 0, min = 0, max = 9999)
+                    NI_Lenght = WGV.Number_input(name = 'Measurement points: ', text_width = 160, number_width = 100, default_value = 40, min = 1, max = 9999)
+
+            MB_test = TM.Manager_Basic(name='Trace Manager Basic',width=1000, height=1000, save_path = Setting_1.Get_setting("MB_test_save_path", ''), save_name = Setting_1.Get_setting("MB_test_save_name", ''), load_path = Setting_1.Get_setting("MB_test_load_path", ''), load_name = Setting_1.Get_setting("MB_test_load_name", 'DC V'))
+
+
 
                     
 
@@ -239,7 +256,7 @@ def main_page():
 
         with WGV.Card(name= 'HP 34401A COM Port', width= 1840, height= 400):
             global G10
-            G10 = WGV.Create_Grid(data=df,width= 1800)
+            G10 = WGV.Grid(data=df,width= 1800)
             with ui.row():
                 T10 = WGV.Text_input(default_text='*IDN?', width= 1000, font_size= 5)
                 def B11_Function():
@@ -253,37 +270,69 @@ def main_page():
             
         with WGV.Card(name= 'Settings', width= 1000, height= 400):
             
-            G_save = WGV.Create_Grid(data=Setting_1.df,width= 960, editable = True)
-            def Load_Settings():
+            G_save = WGV.Grid(data=Setting_1.df,width= 960, editable = True)
+            def Update_Settings():
                 nonlocal G_save
-                Setting_1.Read_from_default_file()
-                G_save.options['rowData'] = Setting_1.df.to_dict('records')
-            def Save_Settings():
                 Setting_1.Set_setting("RS232_1_Port", RS232_1.Get_Port())
                 Setting_1.Set_setting("RS232_1_Baud", RS232_1.Get_Baud())
                 Setting_1.Set_setting("RS232_1_Parity", RS232_1.Get_Parity())
                 Setting_1.Set_setting("RS232_1_Flow", RS232_1.Get_Flow())
                 Setting_1.Set_setting("RS232_1_Timeout", str(RS232_1.Get_Timeout()))
+
                 Setting_1.Set_setting("Instrument_Finder_1_No", str(Instrument_Finder_1.Get_No()))
+
                 Setting_1.Set_setting("Instrument_1_Measurement", Instrument_1.Measurement)
                 Setting_1.Set_setting("Instrument_1_Range", Instrument_1.Range)
                 Setting_1.Set_setting("Instrument_1_Resolution", Instrument_1.Resolution)
                 Setting_1.Set_setting("Instrument_1_Trigger_Source", Instrument_1.Trigger_Source),
                 Setting_1.Set_setting("Instrument_1_Trigger_Count", Instrument_1.Trigger_Count)
+
+                Setting_1.Set_setting("MB_test_save_path", MB_test.save_path)
+                Setting_1.Set_setting("MB_test_save_name", MB_test.save_name)
+                Setting_1.Set_setting("MB_test_load_path", MB_test.load_path)
+                Setting_1.Set_setting("MB_test_load_name", MB_test.load_name)
+
+                G_save.Grid_element.options['rowData'] = Setting_1.df.to_dict('records')
+            def Load_Settings():
+                nonlocal G_save
+                Setting_1.Read_from_default_file()
+                G_save.Grid_element.options['rowData'] = Setting_1.df.to_dict('records')
+            def Save_Settings():
+                Update_Settings()
+                Setting_1.Save_to_default_file()
+            async def Edit_Settings():
+                # Retrieve all rows, including rows hidden by filters
+                # and edits made in the browser.
+                grid_data = await G_save.Grid_element.get_client_data(
+                    timeout=5,
+                    method='all_unsorted'
+                )
+                # Convert the grid data to a pandas DataFrame
+                Setting_1.df = pd.DataFrame(grid_data)
+
+                # Save the edited settings
                 Setting_1.Save_to_default_file()
             with ui.row():
-                #B_update = WGV.Button(lambda: Save_Settings(), name='Update Optios', width= 180)
-                #B_edit = WGV.Button(lambda: Edit_Settings(), name='Save Edits', width= 180)
+                B_update = WGV.Button(lambda: Update_Settings(), name='Update Optios', width= 180)
+                B_edit = WGV.Button(lambda: Edit_Settings(), name='Save Edits', width= 180)
                 B_save = WGV.Button(lambda: Save_Settings(), name='Save to file', width= 180)
                 B_load = WGV.Button(lambda: Load_Settings(), name='Load from file', width= 180)
     
 
 
 
+def message_in_loop():
+    while True:
+        Communicator_1.Message_in_worker()
+        time.sleep(0.01)
 
-    
-    ui.timer(0.01, Communicator_1.Message_in_worker)
-    ui.timer(0.01, Communicator_1.Message_out_worker)
+def message_out_loop():
+    while True:
+        Communicator_1.Message_out_worker()
+        time.sleep(0.01)
+
+threading.Thread(target=message_in_loop, daemon=True).start()
+threading.Thread(target=message_out_loop, daemon=True).start()
 
 
 ui.run()

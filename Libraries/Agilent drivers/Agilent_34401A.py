@@ -318,7 +318,7 @@ class Instrument:
         self.Trigger_Source = trigger_source
 
     def Get_Possoble_Trigger_Count(self):
-        return ['MIN', 'MAX', 'INFINITE']
+        return ['MIN', 'MAX', 'INFINITY']
     
     def Set_Trigger_Count(self, trigger_count):
         self.Trigger_Count = trigger_count
