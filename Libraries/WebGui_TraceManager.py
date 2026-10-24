@@ -210,6 +210,38 @@ class Chart:
                 lineWidth=2
             )
 
+class General_Data:
+    def __init__(self, collums):
+        self.df = pd.DataFrame()
+        self.collums = collums
+        self.New_Trace()        
+        self.changed = False
+    def Replace_All(self, df):
+        self.df = df
+        self.changed = True
+    def New_Trace(self):
+        df = pd.DataFrame()
+        self.df = df
+        for column in self.collums:
+            self.df[column] = None
+        self.changed = True
+    def New_Row(self):
+        new_row = {column: None for column in self.df.columns}
+        self.df.loc[len(self.df)] = new_row
+        self.changed = True
+    def Save_Data_to_File(self, file_name, file_path):
+        self.df.to_csv(os.path.join(file_path, file_name + ".csv"), sep=",", index=False)
+    def Load_Data_from_File(self, file_name, file_path):
+        self.df = pd.read_csv(os.path.join(file_path, file_name + ".csv"), sep=",")
+        self.changed = True
+    def Add_measurement_point(self, data):
+        self.df.loc[len(self.df)] = data
+        self.changed = True
+    def Get_Trace_Data(self, name):
+        return self.df[name].dropna(subset=[name]).reset_index(drop=True)
+    def Reset_Changed(self):
+        self.changed = False
+
 class Trace_Data:
     def __init__(self, x_unit, y_unit):
         self.df = pd.DataFrame()

@@ -28,14 +28,7 @@ RS232_1 = RS232.RS232(Setting_1.Get_setting("RS232_1_Port", "ttyS1"),
                       float(Setting_1.Get_setting("RS232_1_Timeout", 0.01))
                       )
 
-def G10_Add_New_Line(time_request, time_out, data_out, time_in, data_in, messages_out):
-    df.loc[len(df)] = [time_request, time_out, data_out, time_in, data_in, messages_out]
-    G10.Grid_element.options['rowData'] = df.to_dict('records')
-    G10.Grid_element.run_grid_method(
-    'ensureIndexVisible',
-    len(G10.Grid_element.options['rowData']) - 1,
-    'bottom'
-)
+
 
 df = pd.DataFrame({
     'Time Request': {},
@@ -46,6 +39,19 @@ df = pd.DataFrame({
     'Number of messages out': {},
 })
 
+Com_Data = TM.General_Data([
+                            'Time Request',
+                            'Time Out',
+                            'Data Out',
+                            'Time In',
+                            'Data In',
+                            'Number of messages out',
+])
+
+def G10_Add_New_Line(time_request, time_out, data_out, time_in, data_in, messages_out):
+    Com_Data.Add_measurement_point([time_request, time_out, data_out, time_in, data_in, messages_out])
+
+
 Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Line, message_line_in_function=RS232_1.Read_Line, max_number_of_messages_out= 1, generate_log_function= G10_Add_New_Line)
 Instrument_1 = Agilent_34401A.Instrument(Communicator_1,
                                          Setting_1.Get_setting("Instrument_1_Measurement", 'DC V'),
@@ -54,7 +60,12 @@ Instrument_1 = Agilent_34401A.Instrument(Communicator_1,
                                          Setting_1.Get_setting("Instrument_1_Trigger_Source", 'IMMediate'), 
                                          Setting_1.Get_setting("Instrument_1_Trigger_Count", 'INFinity'))
 Communicator_1.Start()
-
+Trace_Data = TM.Trace_Data(
+            x_unit='n',
+            y_unit='V'
+        )
+MB_test = None
+G10 = None
 
 class Instrument_Finder:
     def __init__(self,name: str, RS232: RS232.RS232, Instrument: Agilent_34401A.Instrument, Communicator: Communicator.Communicator = None, Default_No: int = 0, RS232_GUI: RS232.RS232_GUI = None):
@@ -230,7 +241,7 @@ def main_page():
 
                     def save_red_data(text):
                         global i
-                        MB_test.Add_measurement_point(Trace_Name.Text_input_element.value, i, float(text))
+                        Trace_Data.Add_measurement_point(Trace_Name.Text_input_element.value, i, float(text))
                         i = i + 1
                         sweep()
                             
@@ -242,8 +253,8 @@ def main_page():
                 with ui.row():
                     NI_Delay = WGV.Number_input(name = 'Measurement delay: ', text_width = 160, number_width = 100, default_value = 0, min = 0, max = 9999)
                     NI_Lenght = WGV.Number_input(name = 'Measurement points: ', text_width = 160, number_width = 100, default_value = 40, min = 1, max = 9999)
-
-            MB_test = TM.Manager_Basic(name='Trace Manager Basic',width=1000, height=1000, save_path = Setting_1.Get_setting("MB_test_save_path", ''), save_name = Setting_1.Get_setting("MB_test_save_name", ''), load_path = Setting_1.Get_setting("MB_test_load_path", ''), load_name = Setting_1.Get_setting("MB_test_load_name", 'DC V'))
+            global MB_test
+            MB_test = TM.Manager_Basic(name='Trace Manager Basic', trace_data=Trace_Data, width=1000, height=1000, save_path = Setting_1.Get_setting("MB_test_save_path", ''), save_name = Setting_1.Get_setting("MB_test_save_name", ''), load_path = Setting_1.Get_setting("MB_test_load_path", ''), load_name = Setting_1.Get_setting("MB_test_load_name", 'DC V'))
 
 
 
@@ -319,7 +330,20 @@ def main_page():
                 B_load = WGV.Button(lambda: Load_Settings(), name='Load from file', width= 180)
     
 
+    def update():
+        if Trace_Data.changed:
+            MB_test.Refresh_Display()
+            Trace_Data.Reset_Changed()
+        if Com_Data.changed:
+            G10.Grid_element.options['rowData'] = Com_Data.df.to_dict('records')
+            G10.Grid_element.run_grid_method(
+            'ensureIndexVisible',
+            len(G10.Grid_element.options['rowData']) - 1,
+            'bottom'
+            )
+            Com_Data.Reset_Changed()
 
+    ui.timer(1, update)
 
 def message_in_loop():
     while True:
@@ -333,6 +357,8 @@ def message_out_loop():
 
 threading.Thread(target=message_in_loop, daemon=True).start()
 threading.Thread(target=message_out_loop, daemon=True).start()
+
+
 
 
 ui.run()
