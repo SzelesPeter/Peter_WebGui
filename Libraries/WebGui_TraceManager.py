@@ -8,6 +8,7 @@ import uuid
 from math import sin
 import numpy as np
 import random
+import numpy as np
 
 import sys, os
 
@@ -209,170 +210,395 @@ class Chart:
                 lineWidth=2
             )
 
-class Manager_Basic:
-    def __init__(self, name = '', save_path = '', save_name = '', load_path = '', load_name = '', xaxis_name = '', yaxis_name = '', width=WGV.Default_box_width, height=WGV.Default_box_height, background_color = WGV.Default_page_color, grid_color = WGV.Default_background_color, text_color = WGV.Default_border_color):
-        with WGV.Card(name= name, width=width, height=height):
-            self.save_path = save_path
-            self.save_name = save_name
-            self.load_path = load_path
-            self.load_name = load_name
-            self.df = pd.DataFrame()
-            self.Chart_1 = Chart(name = '', xaxis_name= 'X', yaxis_name= 'Y', width=width-40, height=height/2-50)
-            self.Grid_1 = WGV.Grid(data=self.df,width= 960,height=height/2-250, editable = True)
-
-            with ui.row():
-                B_update = WGV.Button(lambda: self.Update_Data_from_Grid(), name='Update', width= 120)
-                WGV.Create_Label_Left_Bold(text = 'Trace name:', width = 90)
-                self.TI_new_trace = WGV.Text_input(width = 200)
-                B_new_trace = WGV.Button(lambda: self.new_trace(self.TI_new_trace.Text_input_element.value), name='New Trace', width= 160)
-                B_new_row = WGV.Button(lambda: self.new_row(), name='New Row', width= 160)
-
-            with ui.row():
-                WGV.Create_Label_Left_Bold(text = 'Save path:', width = 80)
-                self.TI_save_path = WGV.Text_input(width = 340)
-                self.TI_save_path.Text_input_element.value = self.save_path
-                WGV.Create_Label_Left_Bold(text = 'Save name:', width = 90)
-                self.TI_save_name = WGV.Text_input(width = 200)
-                self.TI_save_name.Text_input_element.value = self.save_name
-                B_save = WGV.Button(lambda: self.Save_Data_to_File(), name='Save to file', width= 170)
-            with ui.row():
-                WGV.Create_Label_Left_Bold(text = 'Load path:', width = 80)
-                self.TI_load_path = WGV.Text_input(width = 340)
-                self.TI_load_path.Text_input_element.value = self.load_path
-                WGV.Create_Label_Left_Bold(text = 'Load name:', width = 90)
-                self.TI_load_name = WGV.Text_input(width = 200)
-                self.TI_load_name.Text_input_element.value = self.load_name
-                B_load = WGV.Button(lambda: self.Load_Data_from_File(), name='Load from file', width= 170)
-
-    def new_trace(self, name):
-        self.df[name+'_t'] = None
-        self.df[name] = None
-        self.Grid_1.update_from_df(self.df)
-    def new_row(self):
+class Trace_Data:
+    def __init__(self, x_unit, y_unit):
+        self.df = pd.DataFrame()
+        self.x_unit = x_unit
+        self.y_unit = y_unit
+        self.changed = False
+    def Name_to_Xname(self, name):
+        return name+'_x'+'['+self.x_unit+']'
+    def Name_to_Yname(self, name):
+        return name+'_y'+'['+self.y_unit+']'
+    def Xname_to_name(self, x_name):
+        suffix = f"_x[{self.x_unit}]"
+        if x_name.endswith(suffix):
+            return x_name[:-len(suffix)]
+        raise ValueError(f"Invalid X column name: {x_name}")
+    def Yname_to_name(self, y_name):
+        suffix = f"_x[{self.y_unit}]"
+        if y_name.endswith(suffix):
+            return y_name[:-len(suffix)]
+        raise ValueError(f"Invalid X column name: {y_name}")
+    def Replace_All(self, df):
+        self.df = df
+        self.changed = True
+    def New_Trace(self, name):
+        self.df[self.Name_to_Xname(name)] = None
+        self.df[self.Name_to_Yname(name)] = None
+        self.changed = True
+    def Delete_Trace(self, name):
+        x_col = self.Name_to_Xname(name)
+        y_col = self.Name_to_Yname(name)
+        self.df.drop(columns=[x_col, y_col], errors='ignore', inplace=True)
+        self.changed = True
+    def New_Row(self):
         new_row = {column: None for column in self.df.columns}
         self.df.loc[len(self.df)] = new_row
-        self.Grid_1.update_from_df(self.df)
+        self.changed = True
+    def Save_Data_to_File(self, file_name, file_path):
+        self.df.to_csv(os.path.join(file_path, file_name + ".csv"), sep=",", index=False)
+    def Load_Data_from_File(self, file_name, file_path):
+        self.df = pd.read_csv(os.path.join(file_path, file_name + ".csv"), sep=",")
+        self.changed = True
+    def Add_measurement_point(self, name, x, y):
+        x_col = self.Name_to_Xname(name)
+        y_col = self.Name_to_Yname(name)
+        # Create the trace if it doesn't exist
+        if x_col not in self.df.columns or y_col not in self.df.columns:
+            self.df[x_col] = None
+            self.df[y_col] = None
+        # Find the first empty X position for this trace
+        empty_rows = self.df[x_col].isna()
+        if empty_rows.any():
+            idx = self.df.index[empty_rows][0]
+        else:
+            # Append a new row without overwriting existing data
+            idx = len(self.df)
+            self.df.loc[idx] = {col: None for col in self.df.columns}
+        self.df.loc[idx, x_col] = x
+        self.df.loc[idx, y_col] = y
+        self.changed = True
+    def Get_Trace_Names(self):
+        suffix = f"_x[{self.x_unit}]"
+        return [
+            column[:-len(suffix)]
+            for column in self.df.columns
+            if column.endswith(suffix)
+        ]
+    def Sum_Traces(self, trace1, trace2):
+        new_trace = trace1+'+'+trace2
+        x1_col = self.Name_to_Xname(trace1)
+        y1_col = self.Name_to_Yname(trace1)
+        x2_col = self.Name_to_Xname(trace2)
+        y2_col = self.Name_to_Yname(trace2)
+        # Check that both traces exist
+        if not all(col in self.df.columns for col in
+                   [x1_col, y1_col, x2_col, y2_col]):
+            raise ValueError("One or both traces do not exist.")
+        x_new_col = self.Name_to_Xname(new_trace)
+        y_new_col = self.Name_to_Yname(new_trace)
+        # Extract valid measurement points
+        trace1_data = self.df[[x1_col, y1_col]].dropna().astype(float)
+        trace2_data = self.df[[x2_col, y2_col]].dropna().astype(float)
+        if len(trace1_data) == 0 or len(trace2_data) == 0:
+            raise ValueError("Both traces must contain measurement points.")
+        # Sort trace2 by X and remove duplicate X values
+        trace2_data = (
+            trace2_data.sort_values(x2_col)
+            .drop_duplicates(subset=x2_col, keep="first")
+        )
+        x1 = trace1_data[x1_col].to_numpy()
+        y1 = trace1_data[y1_col].to_numpy()
+        x2 = trace2_data[x2_col].to_numpy()
+        y2 = trace2_data[y2_col].to_numpy()
+        if len(x2) < 2:
+            raise ValueError(
+                "Trace2 must contain at least two distinct X values "
+                "for interpolation and extrapolation."
+            )
+        # Interpolate within the range and extrapolate outside it
+        y2_interpolated = np.interp(x1, x2, y2)
+        # Linear extrapolation below the minimum X
+        below = x1 < x2[0]
+        y2_interpolated[below] = (
+            y2[0] + (x1[below] - x2[0])
+            * (y2[1] - y2[0]) / (x2[1] - x2[0])
+        )
+        # Linear extrapolation above the maximum X
+        above = x1 > x2[-1]
+        y2_interpolated[above] = (
+            y2[-1] + (x1[above] - x2[-1])
+            * (y2[-1] - y2[-2]) / (x2[-1] - x2[-2])
+        )
+        # Create the summed trace
+        result = pd.DataFrame({
+            x_new_col: x1,
+            y_new_col: y1 + y2_interpolated
+        })
+        # Store the result in the main DataFrame
+        self.df[x_new_col] = np.nan
+        self.df[y_new_col] = np.nan
+        self.df.loc[trace1_data.index, x_new_col] = result[x_new_col].to_numpy()
+        self.df.loc[trace1_data.index, y_new_col] = result[y_new_col].to_numpy()
+        self.changed = True
+    def Get_Trace_Data(self, name):
+        x_col = self.Name_to_Xname(name)
+        y_col = self.Name_to_Yname(name)
+        if x_col not in self.df.columns or y_col not in self.df.columns:
+            raise ValueError(f"Trace '{name}' does not exist.")
+        return self.df[[x_col, y_col]].dropna(subset=[x_col, y_col]).reset_index(drop=True)
+    def Add_Trace_Data(self, df):
+        # Add new columns and replace existing columns with matching names
+        self.df = self.df.reindex(
+            columns=self.df.columns.union(df.columns, sort=False)
+        )
+        for column in df.columns:
+            self.df[column] = df[column].reindex(self.df.index)
+        self.changed = True
+    def Interpolate_Trace(self, trace1, trace2):
+        # Column names
+        x1_col = self.Name_to_Xname(trace1)
+        y1_col = self.Name_to_Yname(trace1)
+        x2_col = self.Name_to_Xname(trace2)
+        y2_col = self.Name_to_Yname(trace2)
+        # Check that both traces exist
+        for col in [x1_col, y1_col, x2_col, y2_col]:
+            if col not in self.df.columns:
+                raise ValueError(f"Column '{col}' does not exist.")
+        new_name = trace2 + "_int"
+        x_new_col = self.Name_to_Xname(new_name)
+        y_new_col = self.Name_to_Yname(new_name)
+        if x_new_col in self.df.columns or y_new_col in self.df.columns:
+            raise ValueError(f"Trace '{new_name}' already exists.")
+        # Extract valid data points
+        data1 = self.df[[x1_col, y1_col]].dropna().astype(float)
+        data2 = self.df[[x2_col, y2_col]].dropna().astype(float)
+        if len(data2) < 2:
+            raise ValueError("Trace2 must contain at least two valid points.")
+        # Sort by X and remove duplicate X values
+        data2 = (
+            data2.sort_values(x2_col)
+            .drop_duplicates(subset=x2_col, keep="first")
+        )
+        if len(data2) < 2:
+            raise ValueError("Trace2 must have at least two distinct X values.")
+        x1 = data1[x1_col].to_numpy()
+        x2 = data2[x2_col].to_numpy()
+        y2 = data2[y2_col].to_numpy()
+        # Interpolate within the range
+        y_interpolated = np.interp(x1, x2, y2)
+        # Linear extrapolation below the range
+        below = x1 < x2[0]
+        y_interpolated[below] = (
+            y2[0] + (x1[below] - x2[0])
+            * (y2[1] - y2[0]) / (x2[1] - x2[0])
+        )
+        # Linear extrapolation above the range
+        above = x1 > x2[-1]
+        y_interpolated[above] = (
+            y2[-1] + (x1[above] - x2[-1])
+            * (y2[-1] - y2[-2]) / (x2[-1] - x2[-2])
+        )
+        # Create the new trace with matching X values
+        self.df[x_new_col] = np.nan
+        self.df[y_new_col] = np.nan
+        self.df.loc[data1.index, x_new_col] = x1
+        self.df.loc[data1.index, y_new_col] = y_interpolated
+        self.changed = True
+    def Reset_Changed(self):
+        self.changed = False
+
+
+
+
+class Manager_Basic:
+    def __init__(
+        self,
+        trace_data,
+        name='',
+        save_path='',
+        save_name='',
+        load_path='',
+        load_name='',
+        width=WGV.Default_box_width,
+        height=WGV.Default_box_height*2,
+        background_color=WGV.Default_page_color,
+        grid_color=WGV.Default_background_color,
+        text_color=WGV.Default_border_color
+    ):
+        self.trace_data = trace_data
+
+        self.save_path = save_path
+        self.save_name = save_name
+        self.load_path = load_path
+        self.load_name = load_name
+
+        with WGV.Card(name=name, width=width, height=height):
+
+            self.Chart_1 = Chart(
+                name='',
+                xaxis_name=f'X [{trace_data.x_unit}]',
+                yaxis_name=f'Y [{trace_data.y_unit}]',
+                width=width - 40,
+                height=height / 2 - 50
+            )
+
+            self.Grid_1 = WGV.Grid(
+                data=self.trace_data.df,
+                width=960,
+                height=height / 2 - 250,
+                editable=True
+            )
+
+            with ui.row():
+                WGV.Button(
+                    lambda: self.Update_Data_from_Grid(),
+                    name='Update',
+                    width=120
+                )
+
+                WGV.Create_Label_Left_Bold(
+                    text='Trace name:',
+                    width=90
+                )
+
+                self.TI_new_trace = WGV.Text_input(width=200)
+
+                WGV.Button(
+                    lambda: self.new_trace(
+                        self.TI_new_trace.Text_input_element.value
+                    ),
+                    name='New Trace',
+                    width=160
+                )
+
+                WGV.Button(
+                    lambda: self.new_row(),
+                    name='New Row',
+                    width=160
+                )
+
+            with ui.row():
+                WGV.Create_Label_Left_Bold(
+                    text='Save path:',
+                    width=80
+                )
+                self.TI_save_path = WGV.Text_input(width=340)
+                self.TI_save_path.Text_input_element.value = self.save_path
+
+                WGV.Create_Label_Left_Bold(
+                    text='Save name:',
+                    width=90
+                )
+                self.TI_save_name = WGV.Text_input(width=200)
+                self.TI_save_name.Text_input_element.value = self.save_name
+
+                WGV.Button(
+                    lambda: self.Save_Data_to_File(),
+                    name='Save to file',
+                    width=170
+                )
+
+            with ui.row():
+                WGV.Create_Label_Left_Bold(
+                    text='Load path:',
+                    width=80
+                )
+                self.TI_load_path = WGV.Text_input(width=340)
+                self.TI_load_path.Text_input_element.value = self.load_path
+
+                WGV.Create_Label_Left_Bold(
+                    text='Load name:',
+                    width=90
+                )
+                self.TI_load_name = WGV.Text_input(width=200)
+                self.TI_load_name.Text_input_element.value = self.load_name
+
+                WGV.Button(
+                    lambda: self.Load_Data_from_File(),
+                    name='Load from file',
+                    width=170
+                )
+
+        # Display the initial data
+        self.Refresh_Display()
+
+    def Refresh_Display(self):
+        """Refresh both the grid and the chart."""
+        self.Grid_1.update_from_df(self.trace_data.df)
+        self.Chart_1.update_from_df(self.trace_data.df)
+
+    def new_trace(self, name):
+        """Create a new trace using Trace_Data."""
+        if not name:
+            return
+
+        if name in self.trace_data.Get_Trace_Names():
+            raise ValueError(f"Trace '{name}' already exists.")
+
+        self.trace_data.New_Trace(name)
+        self.Refresh_Display()
+
+    def new_row(self):
+        """Add a new row using Trace_Data."""
+        self.trace_data.New_Row()
+        self.Refresh_Display()
+
     async def Update_Data_from_Grid(self):
-        self.df = await self.Grid_1.data_to_df()
-        self.Chart_1.update_from_df(self.df)
+        """Save grid edits back into Trace_Data."""
+        updated_df = await self.Grid_1.data_to_df()
+        self.trace_data.Replace_All(updated_df)
+        self.Refresh_Display()
+
     def Save_Data_to_File(self):
+        """Save the Trace_Data object to CSV."""
         self.save_path = self.TI_save_path.Text_input_element.value
         self.save_name = self.TI_save_name.Text_input_element.value
-        self.df.to_csv(os.path.join(self.save_path, self.save_name + ".csv"), sep=",", index=False)
+
+        self.trace_data.Save_Data_to_File(
+            self.save_name,
+            self.save_path
+        )
+
     def Load_Data_from_File(self):
+        """Load CSV data into Trace_Data and refresh the display."""
         self.load_path = self.TI_load_path.Text_input_element.value
         self.load_name = self.TI_load_name.Text_input_element.value
-        self.df = pd.read_csv(os.path.join(self.load_path, self.load_name + ".csv"), sep=",")
-        self.Chart_1.update_from_df(self.df)
-        self.Grid_1.update_from_df(self.df)
+
+        self.trace_data.Load_Data_from_File(
+            self.load_name,
+            self.load_path
+        )
+
+        self.Refresh_Display()
 
     def Add_measurement_point(self, name, x, y):
-        if name not in self.df.columns:
-            self.df[name+'_t'] = None
-            self.df[name] = None
-        empty_rows = self.df[name+'_t'].isna()
-        if empty_rows.any():
-            # Overwrite the first empty value
-            idx = self.df.index[empty_rows][0]
-            self.df.loc[idx, name+'_t'] = x
-            self.df.loc[idx, name] = y
-        else:
-            # Create a new row
-            new_row = {column: None for column in self.df.columns}
-            new_row[name+'_t'] = x
-            new_row[name] = y
-            self.df.loc[len(self.df)] = new_row
-
-        self.Chart_1.update_from_df(self.df)
-        self.Grid_1.update_from_df(self.df)
-
-
-"""
-counter = 0
-
-
-@ui.page('/')
-def main_page():
-    # Black page background
-    ui.query('body').style(f'background-color: {WGV.Default_page_color};')
-
-    with WGV.Card(name= 'Charts', width='2050px', height='440px'):
-        with ui.row().classes('gap-0 p-0 m-0'): # column with no spaceing
-            chart1 = Chart(name = 'Chart 1', xaxis_name= 'X', yaxis_name= 'Y')
-            chart2 = Chart(name = 'Chart 2')
-
-
-    
-
-    
-
-    def create_data():
-        data = []
-        x = list(range(100))
-        rand1 = random.randint(1, 50)
-        rand2 = random.randint(1, 50)
-        rand3 = random.randint(-180, 180)
-        for i in x:
-            data.append([i, rand1*sin((i/rand2)+(rand3/100)) + (random.randint(-100, 100)/200)])
-        return data
-
-    def create_digital_data():
-            data = []
-            x = list(range(10))
-            for i in x:
-                data.append([i, random.randint(0, 1)])
-            return data
-
-    
-    L1 = WGV.Create_Label('Chart1')
-    with ui.row():
-        B3 = WGV.Button(lambda: chart1.remove_all_traces(), name='Remove all')
-        B5 = WGV.Button(lambda: chart1.add_trace('Same', create_digital_data(), digital= True), name='Same random')
-
-
-    L2 = WGV.Create_Label('Chart2')
-    with ui.row():
-        B1 = WGV.Button(lambda: chart2.set_xaxis_range(-50, 200), name='Set xAxes')
-        B2 = WGV.Button(lambda: chart2.set_yaxis_range(-50, 200), name='Set yAxes')
-
-    with ui.row():
-        B3 = WGV.Button(lambda: chart2.remove_all_traces(), name='Remove all')
-        B4 = WGV.Button(lambda: button_press(), name='New random')
-        B5 = WGV.Button(lambda: chart2.add_trace('Same', create_data()), name='Same random')
-        B6 = WGV.Button(lambda: chart2.set_yaxis_range(-50, 200), name='Set yAxes')
-        def D1_funct(name):
-            chart2.remove_trace(name)
-            D1.set_options(chart2.get_trace_names())
-            D2.set_options(chart2.get_trace_names())
-        D1 = WGV.Create_Dropdown_Card(function_to_call = D1_funct, options = chart2.get_trace_names())
-
-    with ui.row():
-        selected_trace = chart2.get_trace_names()[0]
-        def D2_funct(name):
-            selected_trace = name
-            L3.set_text(selected_trace)
-        D2 = WGV.Create_Dropdown_Card(function_to_call = D2_funct, options = chart2.get_trace_names())
-        L3 = WGV.Create_Label(selected_trace, '30px')
-        N1 =  WGV.Number_input()
-        B7 = WGV.Button(lambda: chart2.move_trace_x(D2.value, N1.Number_input_element.value), name='Move trace X')
-        N2 =  WGV.Number_input()
-        B8 = WGV.Button(lambda: chart2.move_trace_y(D2.value, N2.Number_input_element.value), name='Move trace Y')
-
-    def button_press():
-        global counter
-        chart2.add_trace(str(counter), create_data())
-        counter = counter+1
-        D1.set_options(chart2.get_trace_names())
-        D2.set_options(chart2.get_trace_names())
+        """Add a measurement point and refresh the display."""
+        self.trace_data.Add_measurement_point(name, x, y)
+        self.Refresh_Display()
 
 
 
 
+if __name__ in {"__main__", "__mp_main__"}:
+    @ui.page('/')
+    def main_page():
+        # Black page background
+        ui.query('body').style(f'background-color: {WGV.Default_page_color};')
 
-ui.run()
+        trace_data = Trace_Data(
+            x_unit='m',
+            y_unit='V'
+        )
 
-"""
+        trace_data.Add_measurement_point('Trace1', 1, 10)
+        trace_data.Add_measurement_point('Trace1', 2, 20)
+        trace_data.Add_measurement_point('Trace1', 3, 30)
+        trace_data.Add_measurement_point('Trace1', 4, 40)
+        trace_data.Add_measurement_point('Trace2', 3, 10)
+        trace_data.Add_measurement_point('Trace2', 4, 50)
+        trace_data.Interpolate_Trace('Trace1', 'Trace2')
+        trace_data.Sum_Traces('Trace1', 'Trace2')
 
+        manager = Manager_Basic(
+            trace_data=trace_data,
+            name='Measurement Manager',
+            save_path='/home/fujitsu/Desktop/tmp/',
+            save_name='measurement'
+        )
+
+    ui.run()
 
 
 
