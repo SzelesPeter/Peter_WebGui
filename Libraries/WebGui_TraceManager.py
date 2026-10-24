@@ -600,7 +600,100 @@ class Manager_Basic:
         self.trace_data.Add_measurement_point(name, x, y)
         self.Refresh_Display()
 
+class Manager_Basic_No_Buttons:
+    def __init__(
+        self,
+        trace_data,
+        name='',
+        save_path='',
+        save_name='',
+        load_path='',
+        load_name='',
+        width=WGV.Default_box_width,
+        height=WGV.Default_box_height*2,
+        background_color=WGV.Default_page_color,
+        grid_color=WGV.Default_background_color,
+        text_color=WGV.Default_border_color
+    ):
+        self.trace_data = trace_data
 
+        self.save_path = save_path
+        self.save_name = save_name
+        self.load_path = load_path
+        self.load_name = load_name
+
+        with WGV.Card(name=name, width=width, height=height):
+            with ui.row():
+                self.Chart_1 = Chart(
+                    name='',
+                    xaxis_name=f'X [{trace_data.x_unit}]',
+                    yaxis_name=f'Y [{trace_data.y_unit}]',
+                    width=width /3*2 - 40,
+                    height=height - 50
+                )
+
+                self.Grid_1 = WGV.Grid(
+                    data=self.trace_data.df,
+                    width=width /3 -40,
+                    height=height - 50,
+                    editable=True
+                )
+        # Display the initial data
+        self.Refresh_Display()
+
+    def Refresh_Display(self):
+        """Refresh both the grid and the chart."""
+        self.Grid_1.update_from_df(self.trace_data.df)
+        self.Chart_1.update_from_df(self.trace_data.df)
+
+    def new_trace(self, name):
+        """Create a new trace using Trace_Data."""
+        if not name:
+            return
+
+        if name in self.trace_data.Get_Trace_Names():
+            raise ValueError(f"Trace '{name}' already exists.")
+
+        self.trace_data.New_Trace(name)
+        self.Refresh_Display()
+
+    def new_row(self):
+        """Add a new row using Trace_Data."""
+        self.trace_data.New_Row()
+        self.Refresh_Display()
+
+    async def Update_Data_from_Grid(self):
+        """Save grid edits back into Trace_Data."""
+        updated_df = await self.Grid_1.data_to_df()
+        self.trace_data.Replace_All(updated_df)
+        self.Refresh_Display()
+
+    def Save_Data_to_File(self):
+        """Save the Trace_Data object to CSV."""
+        self.save_path = self.TI_save_path.Text_input_element.value
+        self.save_name = self.TI_save_name.Text_input_element.value
+
+        self.trace_data.Save_Data_to_File(
+            self.save_name,
+            self.save_path
+        )
+
+    def Load_Data_from_File(self):
+        """Load CSV data into Trace_Data and refresh the display."""
+        self.load_path = self.TI_load_path.Text_input_element.value
+        self.load_name = self.TI_load_name.Text_input_element.value
+
+        self.trace_data.Load_Data_from_File(
+            self.load_name,
+            self.load_path
+        )
+
+        self.Refresh_Display()
+
+    def Add_measurement_point(self, name, x, y):
+        """Add a measurement point and refresh the display."""
+        self.trace_data.Add_measurement_point(name, x, y)
+        self.Refresh_Display()
 
 
 if __name__ in {"__main__", "__mp_main__"}:
