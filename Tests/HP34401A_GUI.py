@@ -18,8 +18,8 @@ import WebGui_TraceManager as TM
 import threading
 
 
-Setting_1 = Settings.Settings("HP34401A_Settings", Peter_WebGui_Path, None)
 
+Setting_1 = Settings.Settings("HP34401A_Settings", Peter_WebGui_Path, None)
 
 RS232_1 = RS232.RS232(Setting_1.Get_setting("RS232_1_Port", "ttyS1"),
                       Setting_1.Get_setting("RS232_1_Baud", "9600"),
@@ -27,45 +27,29 @@ RS232_1 = RS232.RS232(Setting_1.Get_setting("RS232_1_Port", "ttyS1"),
                       Setting_1.Get_setting("RS232_1_Flow", "NONE"),
                       float(Setting_1.Get_setting("RS232_1_Timeout", 0.01))
                       )
+Setting_1.Update_from("RS232_1_Port", RS232_1.Get_Port)
+Setting_1.Update_from("RS232_1_Baud", RS232_1.Get_Baud)
+Setting_1.Update_from("RS232_1_Parity", RS232_1.Get_Parity)
+Setting_1.Update_from("RS232_1_Flow", RS232_1.Get_Flow)
+Setting_1.Update_from("RS232_1_Timeout", RS232_1.Get_Timeout)
 
-
-
-df = pd.DataFrame({
-    'Time Request': {},
-    'Time Out': {},
-    'Data Out': {},
-    'Time In': {},
-    'Data In': {},
-    'Number of messages out': {},
-})
-
-Com_Data = TM.General_Data([
-                            'Time Request',
-                            'Time Out',
-                            'Data Out',
-                            'Time In',
-                            'Data In',
-                            'Number of messages out',
-])
-
-def G10_Add_New_Line(time_request, time_out, data_out, time_in, data_in, messages_out):
-    Com_Data.Add_measurement_point([time_request, time_out, data_out, time_in, data_in, messages_out])
-
-
-Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Line, message_line_in_function=RS232_1.Read_Line, max_number_of_messages_out= 1, generate_log_function= G10_Add_New_Line)
+Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Line, message_line_in_function=RS232_1.Read_Line, max_number_of_messages_out= 1, generate_log_function= None)
 Instrument_1 = Agilent_34401A.Instrument(Communicator_1,
                                          Setting_1.Get_setting("Instrument_1_Measurement", 'DC V'),
                                          Setting_1.Get_setting("Instrument_1_Range", 'AUTO'),
                                          Setting_1.Get_setting("Instrument_1_Resolution", 'DEF'),
                                          Setting_1.Get_setting("Instrument_1_Trigger_Source", 'IMMediate'), 
                                          Setting_1.Get_setting("Instrument_1_Trigger_Count", 'INFinity'))
+Setting_1.Update_from("Instrument_1_Measurement", Instrument_1.Get_Measurement)
+Setting_1.Update_from("Instrument_1_Range", Instrument_1.Get_Range)
+Setting_1.Update_from("Instrument_1_Resolution", Instrument_1.Get_Resolution)
+Setting_1.Update_from("Instrument_1_Trigger_Source", Instrument_1.Get_Trigger_Source),
+Setting_1.Update_from("Instrument_1_Trigger_Count", Instrument_1.Get_Trigger_Count)
 Communicator_1.Start()
 Trace_Data = TM.Trace_Data(
             x_unit='n',
             y_unit='V'
         )
-MB_test = None
-G10 = None
 
 class Instrument_Finder:
     def __init__(self,name: str, RS232: RS232.RS232, Instrument: Agilent_34401A.Instrument, Communicator: Communicator.Communicator = None, Default_No: int = 0, RS232_GUI: RS232.RS232_GUI = None):
@@ -147,6 +131,7 @@ def main_page():
         with ui.column():
             RS232_GUI_1 = RS232.RS232_GUI('HP 34401A COM Port', RS232_1)
             Instrument_Finder_1 = Instrument_Finder('HP 34401A Find', RS232_1, Instrument_1, Communicator_1, int(Setting_1.Get_setting("Instrument_Finder_1_No", "0")), RS232_GUI_1)
+            Setting_1.Update_from("Instrument_Finder_1_No", Instrument_Finder_1.Get_No)
 
         with ui.column():
             with ui.column().classes('gap-0 p-0 m-0'): # column with no spaceing
@@ -255,93 +240,21 @@ def main_page():
                     NI_Lenght = WGV.Number_input(name = 'Measurement points: ', text_width = 160, number_width = 100, default_value = 40, min = 1, max = 9999)
             global MB_test
             MB_test = TM.Manager_Basic(name='Trace Manager Basic', trace_data=Trace_Data, width=1000, height=1000, save_path = Setting_1.Get_setting("MB_test_save_path", ''), save_name = Setting_1.Get_setting("MB_test_save_name", ''), load_path = Setting_1.Get_setting("MB_test_load_path", ''), load_name = Setting_1.Get_setting("MB_test_load_name", 'DC V'))
-
-
-
-                    
-
+            Setting_1.Update_from("MB_test_save_path", MB_test.Get_save_path)
+            Setting_1.Update_from("MB_test_save_name", MB_test.Get_save_name)
+            Setting_1.Update_from("MB_test_load_path", MB_test.Get_load_path)
+            Setting_1.Update_from("MB_test_load_name", MB_test.Get_load_name)
 
     with ui.row():
-
- 
-
-        with WGV.Card(name= 'HP 34401A COM Port', width= 1840, height= 400):
-            global G10
-            G10 = WGV.Grid(data=df,width= 1800)
-            with ui.row():
-                T10 = WGV.Text_input(default_text='*IDN?', width= 1000, font_size= 5)
-                def B11_Function():
-                    if T10.Text_input_element.value[-1] == '?':
-                        Communicator_1.Message_out_request(message_out=T10.Text_input_element.value, timeout = 1)
-                    else:
-                        Communicator_1.Message_out_request(message_out=T10.Text_input_element.value)
-                B11 = WGV.Button(lambda: B11_Function(), name='Write')
-                L10 = WGV.Create_Label_Left('None', font_size= 20)
-
-            
-        with WGV.Card(name= 'Settings', width= 1000, height= 400):
-            
-            G_save = WGV.Grid(data=Setting_1.df,width= 960, editable = True)
-            def Update_Settings():
-                nonlocal G_save
-                Setting_1.Set_setting("RS232_1_Port", RS232_1.Get_Port())
-                Setting_1.Set_setting("RS232_1_Baud", RS232_1.Get_Baud())
-                Setting_1.Set_setting("RS232_1_Parity", RS232_1.Get_Parity())
-                Setting_1.Set_setting("RS232_1_Flow", RS232_1.Get_Flow())
-                Setting_1.Set_setting("RS232_1_Timeout", str(RS232_1.Get_Timeout()))
-
-                Setting_1.Set_setting("Instrument_Finder_1_No", str(Instrument_Finder_1.Get_No()))
-
-                Setting_1.Set_setting("Instrument_1_Measurement", Instrument_1.Measurement)
-                Setting_1.Set_setting("Instrument_1_Range", Instrument_1.Range)
-                Setting_1.Set_setting("Instrument_1_Resolution", Instrument_1.Resolution)
-                Setting_1.Set_setting("Instrument_1_Trigger_Source", Instrument_1.Trigger_Source),
-                Setting_1.Set_setting("Instrument_1_Trigger_Count", Instrument_1.Trigger_Count)
-
-                Setting_1.Set_setting("MB_test_save_path", MB_test.save_path)
-                Setting_1.Set_setting("MB_test_save_name", MB_test.save_name)
-                Setting_1.Set_setting("MB_test_load_path", MB_test.load_path)
-                Setting_1.Set_setting("MB_test_load_name", MB_test.load_name)
-
-                G_save.Grid_element.options['rowData'] = Setting_1.df.to_dict('records')
-            def Load_Settings():
-                nonlocal G_save
-                Setting_1.Read_from_default_file()
-                G_save.Grid_element.options['rowData'] = Setting_1.df.to_dict('records')
-            def Save_Settings():
-                Update_Settings()
-                Setting_1.Save_to_default_file()
-            async def Edit_Settings():
-                # Retrieve all rows, including rows hidden by filters
-                # and edits made in the browser.
-                grid_data = await G_save.Grid_element.get_client_data(
-                    timeout=5,
-                    method='all_unsorted'
-                )
-                # Convert the grid data to a pandas DataFrame
-                Setting_1.df = pd.DataFrame(grid_data)
-
-                # Save the edited settings
-                Setting_1.Save_to_default_file()
-            with ui.row():
-                B_update = WGV.Button(lambda: Update_Settings(), name='Update Optios', width= 180)
-                B_edit = WGV.Button(lambda: Edit_Settings(), name='Save Edits', width= 180)
-                B_save = WGV.Button(lambda: Save_Settings(), name='Save to file', width= 180)
-                B_load = WGV.Button(lambda: Load_Settings(), name='Load from file', width= 180)
-    
+        Com_Log_1 = Communicator.Communicator_Log('HP 34401A COM Port', Communicator_1)
+        Communicator_1.Set_generate_log_function(Com_Log_1.Log)
+        Settings.Settings_GUI('Settings', Setting_1)
 
     def update():
         if Trace_Data.changed:
             MB_test.Refresh_Display()
             Trace_Data.Reset_Changed()
-        if Com_Data.changed:
-            G10.Grid_element.options['rowData'] = Com_Data.df.to_dict('records')
-            G10.Grid_element.run_grid_method(
-            'ensureIndexVisible',
-            len(G10.Grid_element.options['rowData']) - 1,
-            'bottom'
-            )
-            Com_Data.Reset_Changed()
+        Com_Log_1.Update()
 
     ui.timer(1, update)
 
@@ -357,8 +270,5 @@ def message_out_loop():
 
 threading.Thread(target=message_in_loop, daemon=True).start()
 threading.Thread(target=message_out_loop, daemon=True).start()
-
-
-
 
 ui.run()

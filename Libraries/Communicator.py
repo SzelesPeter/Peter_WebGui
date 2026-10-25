@@ -68,6 +68,9 @@ class Communicator:
         self.last_message_send_time = Time.Start_Measureing_Elapsed_Time()
         self.message_delay_after = 0
 
+    def Set_generate_log_function(self, generate_log_function):
+        self.generate_log_function = generate_log_function
+
     def Message_out_request(self, message_out, message_in_target_function = None, timeout = 0, message_delay_after = 0):
         self.message_out_request_list = np.append(self.message_out_request_list, Message_request(message_out, Time.Get_Time_text(), message_in_target_function, timeout, message_delay_after))
 
@@ -150,7 +153,45 @@ class Communicator:
                                                        '',
                                                        '',
                                                        'Timeout!')
-                                
 
 
 
+from nicegui import ui, run
+import WebGui_Visuals as WGV
+import WebGui_TraceManager as TM
+import pandas as pd
+
+class Communicator_Log:
+    def __init__(self, name, communicator):
+        self.communicator = communicator
+        self.Com_Data = TM.General_Data([
+                            'Time Request',
+                            'Time Out',
+                            'Data Out',
+                            'Time In',
+                            'Data In',
+                            'Number of messages out',
+        ])
+        with WGV.Card(name= 'HP 34401A COM Port', width= 1840, height= 400):
+
+            self.G_Log = WGV.Grid(data=self.Com_Data.df,width= 1800)
+            with ui.row():
+                self.T10 = WGV.Text_input(default_text='*IDN?', width= 1000, font_size= 5)
+                self.B11 = WGV.Button(lambda: self.B11_Function(), name='Write')
+                self.L10 = WGV.Create_Label_Left('None', font_size= 20)
+    def B11_Function(self):
+        if self.T10.Text_input_element.value[-1] == '?':
+            self.communicator.Message_out_request(message_out=self.T10.Text_input_element.value, timeout = 1)
+        else:
+            self.communicator.Message_out_request(message_out=self.T10.Text_input_element.value)
+    def Log(self, time_request, time_out, data_out, time_in, data_in, messages_out):
+        self.Com_Data.Add_measurement_point([time_request, time_out, data_out, time_in, data_in, messages_out])
+    def Update(self):
+        if self.Com_Data.changed:
+            self.G_Log.Grid_element.options['rowData'] = self.Com_Data.df.to_dict('records')
+            self.G_Log.Grid_element.run_grid_method(
+            'ensureIndexVisible',
+            len(self.G_Log.Grid_element.options['rowData']) - 1,
+            'bottom'
+            )
+            self.Com_Data.Reset_Changed()

@@ -255,17 +255,26 @@ class Instrument:
     def Set_Measurement(self, measurement):
         self.Measurement = measurement
 
+    def Get_Measurement(self):
+        return self.Measurement
+
     def Get_Possoble_Range(self):
             return ['AUTO', 'MIN', 'MAX', 'DEF']
     
     def Set_Range(self, range):
         self.Range = range
 
+    def Get_Range(self):
+        return self.Range
+
     def Get_Possoble_Resolution(self):
         return ['MIN', 'MAX', 'DEF']
     
     def Set_Resolution(self, resolution):
         self.Resolution = resolution
+
+    def Get_Resolution(self):
+        return self.Resolution
 
     def Measure_Chanel(self, Target_Function):
         if ('DC V' == self.Measurement):
@@ -317,11 +326,17 @@ class Instrument:
     def Set_Trigger_Source(self, trigger_source):
         self.Trigger_Source = trigger_source
 
+    def Get_Trigger_Source(self):
+        return self.Trigger_Source
+
     def Get_Possoble_Trigger_Count(self):
         return ['MIN', 'MAX', 'INFINITY']
     
     def Set_Trigger_Count(self, trigger_count):
         self.Trigger_Count = trigger_count
+
+    def Get_Trigger_Count(self):
+        return self.Trigger_Count
 
     def Scan_Configure(self):
         self.Configure_Chanels()

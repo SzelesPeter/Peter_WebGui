@@ -546,6 +546,15 @@ class Manager_Basic:
         # Display the initial data
         self.Refresh_Display()
 
+    def Get_save_path(self):
+        return self.save_path
+    def Get_save_name(self):
+        return self.save_name
+    def Get_load_path(self):
+        return self.load_path
+    def Get_load_name(self):
+        return self.load_name
+
     def Refresh_Display(self):
         """Refresh both the grid and the chart."""
         self.Grid_1.update_from_df(self.trace_data.df)
