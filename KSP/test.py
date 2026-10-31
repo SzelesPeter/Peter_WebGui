@@ -121,7 +121,6 @@ def launch1():
     threading.Thread(target=launch2, daemon=True).start()
 
 def launch2():
-
     vessel.control.activate_next_stage()
     time.sleep(2)
     vessel.control.activate_next_stage()
@@ -129,12 +128,12 @@ def launch2():
         pass
     vessel.auto_pilot.target_pitch_and_heading(85, 90)
 
-    while(thrust() > 1000):
+    while(vessel.stage_at(4).resources().amount("LqdOxygen") > 25):
         pass
+    for engine in vessel.stage_at(4).parts.engines:
+        engine.active = False
     vessel.control.activate_next_stage()
-    time.sleep(1)
-    vessel.control.activate_next_stage()
-    time.sleep(1)
+    time.sleep(2)
     vessel.control.activate_next_stage()
 
     while(altitude() < 30000):
