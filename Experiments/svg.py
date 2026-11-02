@@ -1,4 +1,4 @@
-
+'''
 from nicegui import ui
 
 with ui.element('div').style(
@@ -122,165 +122,164 @@ status_summary = [
 # --------------------------------------------------
 # SVG drawing helpers
 # --------------------------------------------------
+class SVG:
+    def __init__(self, name: str = None, width = WIDTH, height = HEIGHT, Default_background_color = "#FFFFFF", Default_border_color = "#000000"):
+        self.name = name
+        self.Default_background_color = Default_background_color
+        self.Default_border_color = Default_border_color
+        self.svg_parts = []
+        self.svg = ""
+        self.add(
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 {width} {height}" '
+            f'width="100%" style="display:block;background:white">'
+        )
+    def add(self, content):
+        self.svg_parts.append(content)
+    def end(self):
+        self.add("</svg>")
+        self.svg = "".join(self.svg_parts)
+    def delete_all(self):
+        self.svg_parts = []
+    def line(self, x1, y1, x2, y2, width=1, color="#222"):
+        self.add(
+            f'<line x1="{x1}" y1="{y1}" '
+            f'x2="{x2}" y2="{y2}" '
+            f'stroke="{color}" stroke-width="{width}"/>'
+        )
+    def rect(self, x, y, w, h, fill="white", stroke="#222"):
+        self.add(
+            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="1"/>'
+        )
+    def text(self, x, y, value, size=16, anchor="start",
+             weight="normal", color="#222", rotate=None):
+        transform = (
+            f' transform="rotate({rotate} {x} {y})"'
+            if rotate is not None else ""
+        )
+        self.add(
+            f'<text x="{x}" y="{y}" text-anchor="{anchor}" '
+            f'font-family="Arial, sans-serif" font-size="{size}" '
+            f'font-weight="{weight}" fill="{color}"{transform}>'
+            f'{escape(value)}</text>'
+        )
+    def logic_gate(self, cx, cy):
+        # OR-like convergence symbol used in the reference
+        self.add(
+            f'<circle cx="{cx}" cy="{cy}" r="37" '
+            'fill="white" stroke="#222" stroke-width="1.2"/>'
+        )
+        self.add(
+            f'<circle cx="{cx}" cy="{cy}" r="27" '
+            'fill="white" stroke="#222" stroke-width="1"/>'
+        )
+        self.line(cx - 13, cy, cx + 13, cy)
+        self.line(cx, cy - 13, cx, cy + 13)
+    # --------------------------------------------------
+    # Draw one 16-bit group
+    # --------------------------------------------------
+    def bit_group(self, 
+        x, y, labels, title, side="left",
+        gate_x=None, row_height=18.5,
+    ):
+        """
+        x, y: top-left of group
+        side: 'left' or 'right'
+        gate_x: x position of convergence symbol
+        """
 
-svg_parts = []
+        label_width = 275 if side == "left" else 180
+        number_width = 26
+        enable_width = 25
 
-def add(content):
-    svg_parts.append(content)
+        label_x = x + label_width
+        number_x = label_x + 5
+        enable_x = number_x + number_width + 14
 
+        first_y = y + 18
+        group_height = row_height * 16
 
-def line(x1, y1, x2, y2, width=1, color="#222"):
-    add(
-        f'<line x1="{x1}" y1="{y1}" '
-        f'x2="{x2}" y2="{y2}" '
-        f'stroke="{color}" stroke-width="{width}"/>'
-    )
+        if gate_x is None:
+            gate_x = enable_x + enable_width + 170
 
+        # Group heading
+        self.text(x, y - 24, title, 25, weight="bold")
 
-def rect(x, y, w, h, fill="white", stroke="#222"):
-    add(
-        f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
-        f'fill="{fill}" stroke="{stroke}" stroke-width="1"/>'
-    )
+        # Number and enable columns
+        self.rect(number_x, first_y - 14, number_width, group_height + 5)
+        self.rect(enable_x, first_y - 14, enable_width, group_height + 5,
+             fill="#e9e9e9")
 
-
-def text(x, y, value, size=16, anchor="start",
-         weight="normal", color="#222", rotate=None):
-    transform = (
-        f' transform="rotate({rotate} {x} {y})"'
-        if rotate is not None else ""
-    )
-    add(
-        f'<text x="{x}" y="{y}" text-anchor="{anchor}" '
-        f'font-family="Arial, sans-serif" font-size="{size}" '
-        f'font-weight="{weight}" fill="{color}"{transform}>'
-        f'{escape(value)}</text>'
-    )
-
-
-def logic_gate(cx, cy):
-    # OR-like convergence symbol used in the reference
-    add(
-        f'<circle cx="{cx}" cy="{cy}" r="37" '
-        'fill="white" stroke="#222" stroke-width="1.2"/>'
-    )
-    add(
-        f'<circle cx="{cx}" cy="{cy}" r="27" '
-        'fill="white" stroke="#222" stroke-width="1"/>'
-    )
-    line(cx - 13, cy, cx + 13, cy)
-    line(cx, cy - 13, cx, cy + 13)
-
-
-# --------------------------------------------------
-# Draw one 16-bit group
-# --------------------------------------------------
-
-def bit_group(
-    x, y, labels, title, side="left",
-    gate_x=None, row_height=18.5,
-):
-    """
-    x, y: top-left of group
-    side: 'left' or 'right'
-    gate_x: x position of convergence symbol
-    """
-
-    label_width = 275 if side == "left" else 180
-    number_width = 26
-    enable_width = 25
-
-    label_x = x + label_width
-    number_x = label_x + 5
-    enable_x = number_x + number_width + 14
-
-    first_y = y + 18
-    group_height = row_height * 16
-
-    if gate_x is None:
-        gate_x = enable_x + enable_width + 170
-
-    # Group heading
-    text(x, y - 24, title, 25, weight="bold")
-
-    # Number and enable columns
-    rect(number_x, first_y - 14, number_width, group_height + 5)
-    rect(enable_x, first_y - 14, enable_width, group_height + 5,
-         fill="#e9e9e9")
-
-    text(
-        enable_x + enable_width / 2,
-        first_y + group_height / 2 - 5,
-        "enable",
-        16,
-        anchor="middle",
-        rotate=-90,
-    )
-
-    # Draw all 16 bit positions
-    for bit, label in enumerate(labels):
-        yy = first_y + bit * row_height
-
-        text(label_x, yy + 4, label, 15, anchor="end")
-        line(label_x + 5, yy, number_x, yy)
-
-        text(
-            number_x + number_width / 2,
-            yy + 4,
-            str(bit),
-            15,
+        self.text(
+            enable_x + enable_width / 2,
+            first_y + group_height / 2 - 5,
+            "enable",
+            16,
             anchor="middle",
+            rotate=-90,
         )
 
-        start_x = enable_x + enable_width
-        start_y = yy
+        # Draw all 16 bit positions
+        for bit, label in enumerate(labels):
+            yy = first_y + bit * row_height
 
-        # Lines converge towards the logic gate
-        center_y = first_y + group_height / 2
-        target_y = (
-            center_y
-            + (bit - 7.5) * (row_height * 0.82)
-        )
+            self.text(label_x, yy + 4, label, 15, anchor="end")
+            self.line(label_x + 5, yy, number_x, yy)
 
-        dx = gate_x - start_x
-        dy = target_y - center_y
-        length = math.hypot(dx, dy) or 1
+            self.text(
+                number_x + number_width / 2,
+                yy + 4,
+                str(bit),
+                15,
+                anchor="middle",
+            )
 
-        end_x = gate_x - 38 * dx / length
-        end_y = center_y + 38 * dy / length
+            start_x = enable_x + enable_width
+            start_y = yy
 
-        line(start_x, start_y, end_x, end_y, width=0.9)
+            # Lines converge towards the logic gate
+            center_y = first_y + group_height / 2
+            target_y = (
+                center_y
+                + (bit - 7.5) * (row_height * 0.82)
+            )
 
-    gate_y = first_y + group_height / 2
-    logic_gate(gate_x, gate_y)
+            dx = gate_x - start_x
+            dy = target_y - center_y
+            length = math.hypot(dx, dy) or 1
 
-    return {
-        "left": x,
-        "right": gate_x + 38,
-        "top": y,
-        "bottom": first_y + group_height,
-        "gate_x": gate_x,
-        "gate_y": gate_y,
-        "number_x": number_x,
-        "enable_x": enable_x,
-    }
+            end_x = gate_x - 38 * dx / length
+            end_y = center_y + 38 * dy / length
+
+            self.line(start_x, start_y, end_x, end_y, width=0.9)
+
+        gate_y = first_y + group_height / 2
+        self.logic_gate(gate_x, gate_y)
+
+        return {
+            "left": x,
+            "right": gate_x + 38,
+            "top": y,
+            "bottom": first_y + group_height,
+            "gate_x": gate_x,
+            "gate_y": gate_y,
+            "number_x": number_x,
+            "enable_x": enable_x,
+        }
 
 
 # --------------------------------------------------
 # Compose the diagram
 # --------------------------------------------------
 
-add(
-    f'<svg xmlns="http://www.w3.org/2000/svg" '
-    f'viewBox="0 0 {WIDTH} {HEIGHT}" '
-    f'width="100%" style="display:block;background:white">'
-)
+SVG_1 = SVG()
 
 # Outer frame
-rect(4, 4, WIDTH - 8, HEIGHT - 8)
+SVG_1.rect(4, 4, WIDTH - 8, HEIGHT - 8)
 
 # Upper-left: Instrument 1 event summary
-g1 = bit_group(
+g1 = SVG_1.bit_group(
     30, 67, instrument1,
     "STATus:QUEStionable:INSTrument:ISUMmary1",
     side="left",
@@ -288,7 +287,7 @@ g1 = bit_group(
 )
 
 # Upper-right: instrument summary
-g2 = bit_group(
+g2 = SVG_1.bit_group(
     770, 67, instrument_summary,
     "STATus:QUEStionable:INSTrument",
     side="right",
@@ -296,7 +295,7 @@ g2 = bit_group(
 )
 
 # Lower-left: Instrument event summary
-g3 = bit_group(
+g3 = SVG_1.bit_group(
     115, 525, instrument_events,
     "",
     side="left",
@@ -304,7 +303,7 @@ g3 = bit_group(
 )
 
 # Lower-right: overall status summary
-g4 = bit_group(
+g4 = SVG_1.bit_group(
     770, 525, status_summary,
     "STATus:QUEStionable",
     side="right",
@@ -312,51 +311,51 @@ g4 = bit_group(
 )
 
 # Extension / summary connections
-line(g1["gate_x"] + 37, g1["gate_y"],
+SVG_1.line(g1["gate_x"] + 37, g1["gate_y"],
      623, g1["gate_y"])
-line(623, g1["gate_y"], 623, 104)
-line(623, 104, g2["number_x"], 104)
+SVG_1.line(623, g1["gate_y"], 623, 104)
+SVG_1.line(623, 104, g2["number_x"], 104)
 
-line(g2["gate_x"] + 37, g2["gate_y"],
+SVG_1.line(g2["gate_x"] + 37, g2["gate_y"],
      1277, g2["gate_y"])
-line(1277, g2["gate_y"], 1277, 500)
-line(1277, 500, g4["number_x"], 500)
-line(g4["number_x"], 500, g4["number_x"], 525)
+SVG_1.line(1277, g2["gate_y"], 1277, 500)
+SVG_1.line(1277, 500, g4["number_x"], 500)
+SVG_1.line(g4["number_x"], 500, g4["number_x"], 525)
 
-line(g3["gate_x"] + 37, g3["gate_y"],
+SVG_1.line(g3["gate_x"] + 37, g3["gate_y"],
      660, g3["gate_y"])
-line(660, g3["gate_y"], 660, 525)
-line(660, 525, g4["number_x"], 525)
+SVG_1.line(660, g3["gate_y"], 660, 525)
+SVG_1.line(660, 525, g4["number_x"], 525)
 
 # Status byte output
-line(g4["gate_x"] + 37, g4["gate_y"],
+SVG_1.line(g4["gate_x"] + 37, g4["gate_y"],
      1300, g4["gate_y"], width=1.2)
-add(
+SVG_1.add(
     f'<polygon points="1300,{g4["gate_y"] - 6} '
     f'1315,{g4["gate_y"]} 1300,{g4["gate_y"] + 6}" '
     'fill="#222"/>'
 )
-text(1320, g4["gate_y"] - 20, "To Status Byte,", 23, weight="bold")
-text(1320, g4["gate_y"] + 13, "Bit 3", 23, weight="bold")
+SVG_1.text(1320, g4["gate_y"] - 20, "To Status Byte,", 23, weight="bold")
+SVG_1.text(1320, g4["gate_y"] + 13, "Bit 3", 23, weight="bold")
 
 # Notes
-text(145, 422, "*)", 15)
-text(178, 422, "The use of Bit 15 is not allowed", 16)
-text(178, 442, "since some controllers may have", 16)
-text(178, 462, "difficulty reading a 16 bit un-", 16)
-text(178, 482, "signed integer. The value of this", 16)
-text(178, 502, "bit shall always be 0.", 16)
+SVG_1.text(145, 422, "*)", 15)
+SVG_1.text(178, 422, "The use of Bit 15 is not allowed", 16)
+SVG_1.text(178, 442, "since some controllers may have", 16)
+SVG_1.text(178, 462, "difficulty reading a 16 bit un-", 16)
+SVG_1.text(178, 482, "signed integer. The value of this", 16)
+SVG_1.text(178, 502, "bit shall always be 0.", 16)
 
-text(430, 422, "**)", 15)
-text(463, 422, "The extension bit is used, where", 16)
-text(463, 442, "required, to summarize the events", 16)
-text(463, 462, "in Instrument 15 and up. The", 16)
-text(463, 482, "extension of the status structure", 16)
-text(463, 502, "shall conform to IEEE 488.2", 16)
+SVG_1.text(430, 422, "**)", 15)
+SVG_1.text(463, 422, "The extension bit is used, where", 16)
+SVG_1.text(463, 442, "required, to summarize the events", 16)
+SVG_1.text(463, 462, "in Instrument 15 and up. The", 16)
+SVG_1.text(463, 482, "extension of the status structure", 16)
+SVG_1.text(463, 502, "shall conform to IEEE 488.2", 16)
 
-add("</svg>")
+SVG_1.end()
 
-svg = "".join(svg_parts)
+
 
 
 # --------------------------------------------------
@@ -365,25 +364,7 @@ svg = "".join(svg_parts)
 
 ui.page_title("Status Register Diagram")
 
-ui.add_head_html("""
-<style>
-    body {
-        margin: 0;
-        background: #f3f4f6;
-    }
-    .diagram-container {
-        width: 100%;
-        overflow-x: auto;
-        background: white;
-        border: 1px solid #bbb;
-        box-sizing: border-box;
-    }
-    .diagram-container svg {
-        min-width: 1000px;
-        height: auto;
-    }
-</style>
-""")
+
 
 with ui.column().classes("w-full p-4 gap-3"):
     with ui.row().classes("w-full items-center justify-between"):
@@ -406,4 +387,3 @@ with ui.column().classes("w-full p-4 gap-3"):
         ).classes("w-full")
 
 ui.run(title="Status Register Viewer", reload=False)
-'''

@@ -1,4 +1,6 @@
 
+
+
 class SCPI_Message:
     def __init__(self, Instrument, Command):
         self.Instrument = Instrument
@@ -81,6 +83,83 @@ class SCPI_Message:
         return (self.Read_Block(*variables).split(','))
     """
     
+class SCPI_Status_Bit:
+    def __init__(self, Name :str, Event_Register :bool = False, Enable_Register :bool = False):
+        self.Name = Name
+        self.Event_Register = Event_Register
+        self.Event_Register_Changed = True
+        self.Enable_Register = Enable_Register
+        self.Enable_Register_Changed = True
+    def Set_Event_Register(self, value):
+        if self.Event_Register != value:
+            self.Event_Register = value
+            self.Event_Register_Changed = True
+    def Get_Event_Register(self):
+        self.Event_Register_Changed = False
+        return self.Event_Register
+    def Set_Enable_Register(self, value):
+        if self.Enable_Register != value:
+            self.Enable_Register = value
+            self.Enable_Register_Changed = True
+    def Get_Enable_Register(self):
+        self.Enable_Register_Changed = False
+        return self.Enable_Register
+
+class SCPI_Status_Byte:
+    def __init__(self, Name :str):
+        self.Name = Name
+        self.Bits :SCPI_Status_Bit = []
+    def Add_Bit(self, Name :str, Event_Register :bool = False, Enable_Register :bool = False):
+        self.Bits.append(SCPI_Status_Bit(Name=Name, Event_Register=Event_Register, Enable_Register=Enable_Register))
+    def Event_Register_Changed(self):
+        for Bit in self.Bits:
+            if Bit.Event_Register_Changed == True:
+                return True
+        return False
+    def Reset_Event_Register_Changed(self):
+        for Bit in self.Bits:
+            Bit.Event_Register_Changed = False
+    def Enable_Register_Changed(self):
+        for Bit in self.Bits:
+            if Bit.Enable_Register_Changed == True:
+                return True
+        return False
+    def Reset_Enable_Register_Changed(self):
+        for Bit in self.Bits:
+            Bit.Enable_Register_Changed = False
+    def Set_Event_Register(self, value):
+        value = int(value)
+        binary_string = format(value, str(len(self.Bits))+'b')[::-1]
+        for i in range(len(self.Bits)):
+            if binary_string[i] == '1':
+                self.Bits[i].Set_Event_Register(True)
+            else:
+                self.Bits[i].Set_Event_Register(False)
+    def Get_Event_Register(self):
+        binary :str = ""
+        for Bit in self.Bits:
+            if Bit.Event_Register == True:
+                binary = binary + '1'
+            else:
+                binary = binary + '0'
+        return str(int(binary, 2))[::-1]
+    def Set_Enable_Register(self, value):
+        value = int(value)
+        binary_string = format(value, str(len(self.Bits))+'b')[::-1]
+        for i in range(len(self.Bits)):
+            if binary_string[i] == '1':
+                self.Bits[i].Set_Enable_Register(True)
+            else:
+                self.Bits[i].Set_Enable_Register(False)
+    def Get_Enable_Register(self):
+        binary :str = ""
+        for Bit in self.Bits:
+            if Bit.Enable_Register == True:
+                binary = binary + '1'
+            else:
+                binary = binary + '0'
+        return str(int(binary, 2))[::-1]
+
 
 class Instrument:
     def __init__(self, Interface, Measurement = 'DC V', Range = 'AUTO', Resolution = 'DEF', Trigger_Source = 'IMMediate', Trigger_Count = 'INFinity'):
@@ -94,6 +173,49 @@ class Instrument:
         self.Trigger_Source = Trigger_Source
         self.Trigger_Count = Trigger_Count
 
+        # Status System 
+        self.Status_Byte = SCPI_Status_Byte('Status Byte')
+        self.Status_Byte.Add_Bit('Not Used')
+        self.Status_Byte.Add_Bit('Not Used')
+        self.Status_Byte.Add_Bit('Not Used')
+        self.Status_Byte.Add_Bit('Questionable Data')
+        self.Status_Byte.Add_Bit('Message Available')
+        self.Status_Byte.Add_Bit('Standard Event')
+        self.Status_Byte.Add_Bit('Request Service')
+        self.Status_Byte.Add_Bit('Not Used')
+
+        self.Standard_Event_Register = SCPI_Status_Byte('Standard Event Register')
+        self.Standard_Event_Register.Add_Bit('Operation Complete')
+        self.Standard_Event_Register.Add_Bit('Not Used')
+        self.Standard_Event_Register.Add_Bit('Query Error')
+        self.Standard_Event_Register.Add_Bit('Device Error')
+        self.Standard_Event_Register.Add_Bit('Execution Error')
+        self.Standard_Event_Register.Add_Bit('Command Error')
+        self.Standard_Event_Register.Add_Bit('Not Used')
+        self.Standard_Event_Register.Add_Bit('Power On')
+
+        self.Questionable_Data_Register = SCPI_Status_Byte('Questionable Data Register')
+        self.Questionable_Data_Register.Add_Bit('Voltage Overload')
+        self.Questionable_Data_Register.Add_Bit('Current Overload')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Ohms Overload')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Limit Fail LO')
+        self.Questionable_Data_Register.Add_Bit('Limit Fail HI')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+        self.Questionable_Data_Register.Add_Bit('Not Used')
+
+        self.Status_Bytes = []
+        self.Status_Bytes.append(self.Status_Byte)
+        self.Status_Bytes.append(self.Standard_Event_Register)
+        self.Status_Bytes.append(self.Questionable_Data_Register)
 
         # Measurement Commands
         self.MEASure_VOLTage_DC = SCPI_Message(self, 'MEASure:VOLTage:DC') # [{<range>|AUTO |MIN|MAX|DEF}[,<resolution>|MIN|MAX|DEF}],]
@@ -207,7 +329,7 @@ class Instrument:
 
         # Interface Configuration Commands
         self.SYSTem_INTerface = SCPI_Message(self, 'SYSTem:INTerface') # {GPIB|RS232}
-        self.SYSTem_LOCal = SCPI_Message(self, 'SYSTem:LOCal')
+        self.SYSTem_LOCal = SCPI_Message(self, 'Show to get a for loop witYSTem:LOCal')
         self.SYSTem_REMote = SCPI_Message(self, 'SYSTem:REMote')
         self.SYSTem_RWLock = SCPI_Message(self, 'SYSTem:RWLock')
 
@@ -241,6 +363,32 @@ class Instrument:
 
     def Local(self):
         self.SYSTem_LOCal.Write()
+
+    def Poll(self):
+        if self.Status_Byte.Enable_Register_Changed() == True:
+            self.SRE.Write(self.Status_Byte.Get_Enable_Register())
+            self.Status_Byte.Reset_Enable_Register_Changed()
+            time.sleep
+        if self.Standard_Event_Register.Enable_Register_Changed() == True:
+            self.ESE.Write(self.Standard_Event_Register.Get_Enable_Register())
+            self.Standard_Event_Register.Reset_Enable_Register_Changed()
+        if self.Questionable_Data_Register.Enable_Register_Changed() == True:
+            self.STATus_QUEStionable_ENABle.Write(self.Questionable_Data_Register.Get_Enable_Register())
+            self.Questionable_Data_Register.Reset_Enable_Register_Changed()
+
+        self.STB.Read(self.Poll_2)
+
+    def Poll_2(self, data):
+        self.Status_Byte.Set_Event_Register(data)
+        Status_Byte_binary_string = format(int(data), str(len(self.Status_Byte.Bits))+'b')[::-1]
+        if(Status_Byte_binary_string[3] == '1'):
+            self.STATus_QUEStionable_EVENt.Read(self.Questionable_Data_Register.Set_Event_Register)
+        else:
+            self.Questionable_Data_Register.Set_Event_Register('0')
+        if(Status_Byte_binary_string[5] == '1'):
+            self.ESR.Read(self.Standard_Event_Register.Set_Event_Register)
+        else:
+            self.Standard_Event_Register.Set_Event_Register('0')
 
     def Get_Possoble_Measurement(self):
         return ['DC V', 'AC V', 'Ω 2W', 'Ω 4W', 'DC I', 'AC I', 'Freq', 'Period', 'Cont', 'Diode']
