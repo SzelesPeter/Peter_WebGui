@@ -37,6 +37,18 @@ Setting_1.Update_from("RS232_1_Parity", RS232_1.Get_Parity)
 Setting_1.Update_from("RS232_1_Flow", RS232_1.Get_Flow)
 Setting_1.Update_from("RS232_1_Timeout", RS232_1.Get_Timeout)
 
+RS232_2 = RS232.RS232(Setting_1.Get_setting("RS232_2_Port", "ttyS1"),
+                      Setting_1.Get_setting("RS232_2_Baud", "9600"),
+                      Setting_1.Get_setting("RS232_2_Parity", "NONE"),
+                      Setting_1.Get_setting("RS232_2_Flow", "NONE"),
+                      float(Setting_1.Get_setting("RS232_2_Timeout", 0.01))
+                      )
+Setting_1.Update_from("RS232_2_Port", RS232_1.Get_Port)
+Setting_1.Update_from("RS232_2_Baud", RS232_1.Get_Baud)
+Setting_1.Update_from("RS232_2_Parity", RS232_1.Get_Parity)
+Setting_1.Update_from("RS232_2_Flow", RS232_1.Get_Flow)
+Setting_1.Update_from("RS232_2_Timeout", RS232_1.Get_Timeout)
+
 Communicator_1 = Communicator.Communicator(message_out_function=RS232_1.Write_Line, message_line_in_function=RS232_1.Read_Line, max_number_of_messages_out= 1, generate_log_function= None)
 Instrument_1 = Agilent_34401A.Instrument(Communicator_1,
                                          Setting_1.Get_setting("Instrument_1_Measurement", 'DC V'),
@@ -50,7 +62,7 @@ Setting_1.Update_from("Instrument_1_Resolution", Instrument_1.Get_Resolution)
 Setting_1.Update_from("Instrument_1_Trigger_Source", Instrument_1.Get_Trigger_Source),
 Setting_1.Update_from("Instrument_1_Trigger_Count", Instrument_1.Get_Trigger_Count)
 Trace_Data = TM.Trace_Data(
-            x_unit='n',
+            x_unit='MHz',
             y_unit='V'
         )
 
@@ -491,7 +503,28 @@ def create_diagram():
 
 
 
+class Error_Log:
+    def __init__(self, name, Instrument):
+        self.Instrument = Instrument
+        self.Error_Data = TM.General_Data([
+                            'Time',
+                            'Number',
+                            'Description',
+        ])
+        with WGV.Card(name= 'HP 34401A ERRORS', width= 1840, height= 400):
+            self.G_Log = WGV.Grid(data=self.Error_Data.df,width= 1800)
 
+    def Update(self):
+        if len(self.Instrument.ERROR) != 0:
+            for i in range(len(self.Instrument.ERROR)):
+                ERROR = self.Instrument.ERROR.pop()
+                self.Error_Data.Add_measurement_point([Time.Get_Time_text(), ERROR[0], ERROR[1]])
+            self.G_Log.Grid_element.options['rowData'] = self.Error_Data.df.to_dict('records')
+            self.G_Log.Grid_element.run_grid_method(
+            'ensureIndexVisible',
+            len(self.G_Log.Grid_element.options['rowData']) - 1,
+            'bottom'
+            )
 
 
 
@@ -584,6 +617,7 @@ def main_page():
             RS232_GUI_1 = RS232.RS232_GUI('HP 34401A COM Port', RS232_1)
             Instrument_Finder_1 = Instrument_Finder('HP 34401A Find', RS232_1, Instrument_1, Communicator_1, int(Setting_1.Get_setting("Instrument_Finder_1_No", "0")), RS232_GUI_1)
             Setting_1.Update_from("Instrument_Finder_1_No", Instrument_Finder_1.Get_No)
+            RS232_GUI_2 = RS232.RS232_GUI('SMF COM Port', RS232_2)
 
         with ui.column():
             with ui.column().classes('gap-0 p-0 m-0'): # column with no spaceing
@@ -690,6 +724,72 @@ def main_page():
                 with ui.row():
                     NI_Delay = WGV.Number_input(name = 'Measurement delay: ', text_width = 160, number_width = 100, default_value = 0, min = 0, max = 9999)
                     NI_Lenght = WGV.Number_input(name = 'Measurement points: ', text_width = 160, number_width = 100, default_value = 40, min = 1, max = 9999)
+
+
+
+            with WGV.Card(name= 'RF Power detector', width=1000, height=300):
+                with ui.row():
+
+                    def sweep():
+                        global Running
+                        global i
+                        global SMF_Power
+                        global SMF_Freq
+                    
+                        if Running and SMF_Power <= NI_P_MAX.Number_input_element.value:
+                            Instrument_1.Scan_Read(save_red_data)        
+                        else:
+                            Running = False
+                            RS232_2.Write_Line(f"OUTP:STAT 1")
+                            print("Sweep finished")
+
+                    def start_sweep():
+                        global sweep_thread, Running, i
+                        global SMF_Power
+                        global SMF_Freq
+                        i = 0
+                        if sweep_thread is not None and sweep_thread.is_alive():
+                            return  # Prevent starting a second sweep
+                        Instrument_1.Remote()
+                        Instrument_1.Beep()
+                        Instrument_1.Scan_Configure()
+                        Running = True
+                        SMF_Power = NI_P_MIN.Number_input_element.value
+                        SMF_Freq = NI_F_MIN.Number_input_element.value
+                        RS232_2.Write_Line(f"OUTP:STAT 1")
+                        sweep_thread = threading.Thread(target=sweep, daemon=True)
+                        sweep_thread.start()
+
+                    def save_red_data(text):
+                        global i, SMF_Freq, SMF_Power
+                        RS232_2.Write_Line(f"SOUR:FREQ:CW {SMF_Freq * 1000000}")
+                        RS232_2.Write_Line(f"SOUR1:POW:LEV {SMF_Power}")
+                        time.sleep(NI_Delay2.Number_input_element.value)
+                        Trace_Data.Add_measurement_point(Trace_Name.Text_input_element.value + '_' + str(SMF_Power) + 'dBm', SMF_Freq, float(text))
+                        i = i + 1
+                        SMF_Freq = SMF_Freq + NI_F_STEP.Number_input_element.value
+                        if SMF_Freq > NI_F_MAX.Number_input_element.value:
+                            SMF_Freq = NI_F_MIN.Number_input_element.value
+                            SMF_Power = SMF_Power + NI_P_STEP.Number_input_element.value
+
+                        sweep()
+                            
+                    B_Start = WGV.Button(lambda: start_sweep(), name='START', width= 80, background_color = "#DF9439", border_color = "#FFFFFF", text_color = "#FFFFFF")
+                    B_Stop = WGV.Button(lambda: B_Stop_Function(), name='STOP', width= 80, background_color = "#F5F5F5", border_color = '#2A2727', text_color = "#2A2727")
+
+                    WGV.Create_Label_Left_Bold(text = 'Trace Name:', width = 100)
+                    Trace_Name = WGV.Text_input(width = 200)
+                with ui.row():
+                    NI_F_MIN = WGV.Number_input(name = 'Min Freq: ', text_width = 100, number_width = 150, default_value = 1, min = 0.00000000001, max = 1000000000000)
+                    NI_F_MAX = WGV.Number_input(name = 'Max Freq: ', text_width = 100, number_width = 150, default_value = 10, min = 0.0000000001, max = 1000000000000)
+                    NI_F_STEP = WGV.Number_input(name = 'Freq Step: ', text_width = 100, number_width = 150, default_value = 1, min = 0.0000000000001, max = 1000000000000)
+                with ui.row():
+                    NI_P_MIN = WGV.Number_input(name = 'Min Power: ', text_width = 100, number_width = 150, default_value = 0, min = -999999, max = 10)
+                    NI_P_MAX = WGV.Number_input(name = 'Max Power: ', text_width = 100, number_width = 150, default_value = 0, min = -999999, max = 10)
+                    NI_P_STEP = WGV.Number_input(name = 'Power Step: ', text_width = 100, number_width = 150, default_value = 1, min = 0.0000000000001, max = 10)
+                with ui.row():
+                    NI_Delay2 = WGV.Number_input(name = 'Measurement delay: ', text_width = 160, number_width = 100, default_value = 0, min = 0, max = 9999)
+
             global MB_test
             MB_test = TM.Manager_Basic(name='Trace Manager Basic', trace_data=Trace_Data, width=1000, height=1000, save_path = Setting_1.Get_setting("MB_test_save_path", ''), save_name = Setting_1.Get_setting("MB_test_save_name", ''), load_path = Setting_1.Get_setting("MB_test_load_path", ''), load_name = Setting_1.Get_setting("MB_test_load_name", 'DC V'))
             Setting_1.Update_from("MB_test_save_path", MB_test.Get_save_path)
@@ -697,26 +797,31 @@ def main_page():
             Setting_1.Update_from("MB_test_load_path", MB_test.Get_load_path)
             Setting_1.Update_from("MB_test_load_name", MB_test.Get_load_name)
 
-    with ui.row():
-        Com_Log_1 = Communicator.Communicator_Log('HP 34401A COM Port', Communicator_1)
-        Communicator_1.Set_generate_log_function(Com_Log_1.Log)
-        Settings.Settings_GUI('Settings', Setting_1)
 
-    with WGV.Card(name= 'Status', width=1000, height=1870):
-        def Status_set(value):
-            global Status_on
-            Status_on = value
-        WGV.Checkbox(name= 'Status on', default_value = False, function_when_changed = Status_set )
-        SVG_1 = SVG.SVG()
-        SVG_1.svg = create_diagram()
-        SVG_Box_1 = WGV.SVG_Box(SVG_1)
-        with ui.row():
-            for byte in Instrument_1.Status_Bytes:
-                with WGV.Card(name= byte.Name, width=300, height=950):
-                    for i in range(len(byte.Bits)):
-                        if (byte.Bits[i].Name != 'Not Used') and (byte.Bits[i].Name != 'Request Service'):
-                            WGV.Checkbox(name= byte.Bits[i].Name, default_value = True, function_when_changed = byte.Bits[len(byte.Bits)-1-i].Set_Enable_Register)
-                            byte.Bits[len(byte.Bits)-1-i].Set_Enable_Register(1)
+        with ui.column():
+            Settings.Settings_GUI('Settings', Setting_1)
+            with WGV.Card(name= 'Status', width=1000, height=1400):
+                def Status_set(value):
+                    global Status_on
+                    Status_on = value
+                WGV.Checkbox(name= 'Status on', default_value = False, function_when_changed = Status_set )
+                SVG_1 = SVG.SVG()
+                SVG_1.svg = create_diagram()
+                SVG_Box_1 = WGV.SVG_Box(SVG_1)
+                with ui.row():
+                    for byte in Instrument_1.Status_Bytes:
+                        with WGV.Card(name= byte.Name, width=300, height=400):
+                            for i in range(len(byte.Bits)):
+                                if (byte.Bits[i].Name != 'Not Used') and (byte.Bits[i].Name != 'Request Service'):
+                                    WGV.Checkbox(name= byte.Bits[i].Name, default_value = True, function_when_changed = byte.Bits[len(byte.Bits)-1-i].Set_Enable_Register)
+                                    byte.Bits[i].Set_Enable_Register(True)
+
+    Com_Log_1 = Communicator.Communicator_Log('HP 34401A COM Port', Communicator_1)
+    Communicator_1.Set_generate_log_function(Com_Log_1.Log)
+    Error_Log_1 = Error_Log("HP34401A ERRORs", Instrument_1)
+
+
+
 
     def update():
         global Status_on
@@ -724,19 +829,20 @@ def main_page():
             MB_test.Refresh_Display()
             Trace_Data.Reset_Changed()
         Com_Log_1.Update()
-        #if Instrument_1.Status_Byte.Event_Register_Changed() or Instrument_1.Standard_Event_Register.Event_Register_Changed() or Instrument_1.Questionable_Data_Register.Event_Register_Changed():
-        #Instrument_1.Status_Byte.Reset_Event_Register_Changed()
-        #Instrument_1.Standard_Event_Register.Reset_Event_Register_Changed()
-        #Instrument_1.Questionable_Data_Register.Reset_Event_Register_Changed()
-        if Status_on == True:
+        if Instrument_1.Status_Byte.Event_Register_Changed() or Instrument_1.Standard_Event_Register.Event_Register_Changed() or Instrument_1.Questionable_Data_Register.Event_Register_Changed():
             SVG_1.svg = create_diagram()
             SVG_Box_1.Update()
             print('1')
+            Instrument_1.Status_Byte.Reset_Event_Register_Changed()
+            Instrument_1.Standard_Event_Register.Reset_Event_Register_Changed()
+            Instrument_1.Questionable_Data_Register.Reset_Event_Register_Changed()
+        if Status_on == True:
             if Communicator_1.working == True:
                 print('3')
                 Instrument_1.Poll()
+        Error_Log_1.Update()
 
-    ui.timer(1, update)
+    ui.timer(0.5, update)
 
 def message_in_loop():
     while True:

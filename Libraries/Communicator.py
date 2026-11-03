@@ -144,8 +144,8 @@ class Communicator:
                         if self.message_out_sent_list[-1].message_timeout <= Time.Time_Elapsed_Since_Start(self.message_out_sent_list[-1].timeout_start_time):
                             Message_sent_object: Message_sent = self.message_out_sent_list[0]
                             self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
-                            if Message_sent_object.message_in_target_function != None:
-                                Message_sent_object.message_in_target_function('')
+                            #if Message_sent_object.message_in_target_function != None:
+                                #Message_sent_object.message_in_target_function('')
                             if self.generate_log_function != None:   
                                 self.generate_log_function(Message_sent_object.message_request_time,
                                                        Message_sent_object.message_out_time,

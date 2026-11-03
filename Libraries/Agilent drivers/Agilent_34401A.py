@@ -142,7 +142,7 @@ class SCPI_Status_Byte:
                 binary = binary + '1'
             else:
                 binary = binary + '0'
-        return str(int(binary, 2))[::-1]
+        return str(int(binary[::-1], 2))
     def Set_Enable_Register(self, value):
         value = int(value)
         binary_string = format(value, str(len(self.Bits))+'b')[::-1]
@@ -158,7 +158,7 @@ class SCPI_Status_Byte:
                 binary = binary + '1'
             else:
                 binary = binary + '0'
-        return str(int(binary, 2))[::-1]
+        return str(int(binary[::-1], 2))
 
 
 class Instrument:
@@ -216,6 +216,8 @@ class Instrument:
         self.Status_Bytes.append(self.Status_Byte)
         self.Status_Bytes.append(self.Standard_Event_Register)
         self.Status_Bytes.append(self.Questionable_Data_Register)
+
+        self.ERROR = []
 
         # Measurement Commands
         self.MEASure_VOLTage_DC = SCPI_Message(self, 'MEASure:VOLTage:DC') # [{<range>|AUTO |MIN|MAX|DEF}[,<resolution>|MIN|MAX|DEF}],]
@@ -368,7 +370,6 @@ class Instrument:
         if self.Status_Byte.Enable_Register_Changed() == True:
             self.SRE.Write(self.Status_Byte.Get_Enable_Register())
             self.Status_Byte.Reset_Enable_Register_Changed()
-            time.sleep
         if self.Standard_Event_Register.Enable_Register_Changed() == True:
             self.ESE.Write(self.Standard_Event_Register.Get_Enable_Register())
             self.Standard_Event_Register.Reset_Enable_Register_Changed()
@@ -386,10 +387,33 @@ class Instrument:
         else:
             self.Questionable_Data_Register.Set_Event_Register('0')
         if(Status_Byte_binary_string[5] == '1'):
-            self.ESR.Read(self.Standard_Event_Register.Set_Event_Register)
+            self.ESR.Read(self.Poll_3)
         else:
             self.Standard_Event_Register.Set_Event_Register('0')
 
+
+    def Poll_3(self, data):
+        self.Standard_Event_Register.Set_Event_Register(data)
+        Standard_Event_binary_string = format(int(data), str(len(self.Standard_Event_Register.Bits))+'b')[::-1]
+        if(Standard_Event_binary_string[2] == '1'):
+            self.Read_Error()
+        if(Standard_Event_binary_string[3] == '1'):
+            self.Read_Error()
+        if(Standard_Event_binary_string[4] == '1'):
+            self.Read_Error()
+        if(Standard_Event_binary_string[5] == '1'):
+            self.Read_Error()
+
+    def Read_Error(self, ERROR = ','):
+        ERROR = ERROR.split(',')
+        if ERROR[0] == '': #FIRST RUN
+            self.SYSTem_ERRor.Read(self.Read_Error)
+        else: #Not first run
+            ERROR[0] = int(ERROR[0])
+            if ERROR[0] != 0: #was it the last run
+                self.ERROR.append(ERROR)
+                self.SYSTem_ERRor.Read(self.Read_Error)
+        
     def Get_Possoble_Measurement(self):
         return ['DC V', 'AC V', 'Ω 2W', 'Ω 4W', 'DC I', 'AC I', 'Freq', 'Period', 'Cont', 'Diode']
 

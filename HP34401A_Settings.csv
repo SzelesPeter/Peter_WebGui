@@ -1,5 +1,5 @@
 Name,Value
-RS232_1_Port,ttyUSB1
+RS232_1_Port,ttyUSB3
 RS232_1_Baud,9600
 RS232_1_Parity,NONE
 RS232_1_Flow,NONE
@@ -10,7 +10,12 @@ Instrument_1_Resolution,MAX
 Instrument_1_Trigger_Source,IMMEDIATE
 Instrument_1_Trigger_Count,1
 Instrument_Finder_1_No,0
-MB_test_save_path,/home/peter/Documents/Python/Projects/Peter_WebGui/
+MB_test_save_path,/home/fujitsu/Desktop//Peter_WebGui/
 MB_test_save_name,data2
 MB_test_load_path,/home/peter/Documents/Python/Projects/Peter_WebGui/
 MB_test_load_name,data
+RS232_2_Port,ttyUSB3
+RS232_2_Baud,9600
+RS232_2_Parity,NONE
+RS232_2_Flow,NONE
+RS232_2_Timeout,0.01
