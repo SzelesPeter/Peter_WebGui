@@ -1,0 +1,4 @@
+[console_scripts]
+hp34401a-gui = peter_webgui.apps.hp34401a_gui:main
+hp34970a-gui = peter_webgui.apps.hp34970a_gui:main
+multipage-demo = peter_webgui.apps.multipage_demo:main

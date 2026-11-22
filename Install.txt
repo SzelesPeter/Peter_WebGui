@@ -1,0 +1,14 @@
+Install it locally
+"
+cd myproject
+python -m venv .venv && source .venv/bin/activate
+pip install -e .        # editable mode: code changes take effect immediately
+"
+
+Build and publish
+"
+pip install build twine
+python -m build                 # creates dist/*.whl and dist/*.tar.gz
+twine upload --repository testpypi dist/*   # test first
+twine upload dist/*             # real PyPI
+"

@@ -1,0 +1,15 @@
+nicegui>=3.0
+pandas
+numpy
+pyserial>=3.5
+
+[dev]
+pytest
+build
+twine
+
+[ksp]
+krpc
+
+[usb]
+pyusb
