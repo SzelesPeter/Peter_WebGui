@@ -16,6 +16,7 @@ class Settings:
         self.path = path or default_dir()
         self.debug = debug
         self.update_saves_array = []
+        self.unsaved_changes = False  # set when Get_setting adds a default that is not in the file yet
         self.df = pd.DataFrame({
             "Name": [],
             "Value": []
@@ -34,6 +35,7 @@ class Settings:
             value = self.df.loc[self.df["Name"] == name, "Value"].iloc[0]
         except:
             self.df.loc[len(self.df)] = [name, value]
+            self.unsaved_changes = True
         return(value)
 
     def Update_from(self, name, update_from):
@@ -49,6 +51,27 @@ class Settings:
             value = str(setting[1]())
             print(value)
             self.Set_setting(setting[0], value)
+
+    def Save_if_changed(self):
+        """Pull every Update_from getter and write the CSV only if a value differs from what is stored.
+
+        Cheap enough to call from a ui.timer, so settings are saved automatically as inputs change.
+        Returns True if the file was written.
+        """
+        changed = self.unsaved_changes
+        for name, getter in self.update_saves_array:
+            value = str(getter())
+            current = self.df.loc[self.df["Name"] == name, "Value"]
+            if current.empty:
+                self.df.loc[len(self.df)] = [name, value]
+                changed = True
+            elif ('' if pd.isna(current.iloc[0]) else str(current.iloc[0])) != value:  # empty cells load as NaN
+                self.Set_setting(name, value)
+                changed = True
+        if changed:
+            self.Save_to_default_file()
+            self.unsaved_changes = False
+        return changed
 
     def Save_to_default_file(self):
         self.df.to_csv(os.path.join(self.path, self.name + ".csv"), sep=",", index=False)

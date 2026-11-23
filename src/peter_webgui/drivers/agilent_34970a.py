@@ -5,10 +5,10 @@ class SCPI_Message:
         self.Command = Command
 
     def __Send_Command(self, Text):
-        self.Instrument.Interface.Message_out_request(message_out=Text, message_in_target_function = None, timeout = 0)
+        self.Instrument.Interface.Message_out_request(message_out=Text, callback_function = None, timeout = 0)
 
     def __Send_Query(self, Text, Target_Function):
-        self.Instrument.Interface.Message_out_request(message_out=Text, message_in_target_function = Target_Function, timeout = 10)
+        self.Instrument.Interface.Message_out_request(message_out=Text, callback_function = Target_Function, timeout = 10)
 
     def Set(self):
         self.__Send_Command(self.Command + ' ON')

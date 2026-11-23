@@ -24,6 +24,18 @@ def home_page():
         clock = WGV.Create_Label_Left('', font_size=40, width=900, color=WGV.Default_color)
         ui.timer(0.1, lambda: clock.set_text(Time.Get_Time_text()))
 
+    with WGV.Card('Multi-line text', width=1000, height=330):
+        line_count = WGV.Create_Label_Left('', width=900)
+        def Show_line_count(text):
+            line_count.set_text(f'{len(text.splitlines())} lines, {len(text)} characters')
+        notes = WGV.Text_area(width=940, height=180,
+                              default_text='*RST\n*CLS\nCONF:VOLT:DC AUTO,DEF\nREAD?',
+                              function_when_changed=Show_line_count)
+        Show_line_count(notes.Get_text())
+        with ui.row():
+            WGV.Button(lambda: ui.notify(' | '.join(notes.Get_lines()) or '(empty)'), name='Show lines', width=180)
+            WGV.Button(lambda: notes.Set_text(''), name='Clear', width=180)
+
 
 def chart_page():
     with WGV.Card('Chart', width=1000, height=450):
@@ -39,7 +51,11 @@ def data_page():
         'Value': [1.234, 0.567, 1000.0, 0.012],
     })
     with WGV.Card('Data', width=1000, height=400):
-        WGV.Grid(data=df, width=960, editable=True)
+        grid = WGV.Grid(data=df, width=960, height=290, editable=True, column_width=150)
+        with ui.row():
+            WGV.Button(lambda: grid.Set_column_width(150), name='150 px', width=180)
+            WGV.Button(lambda: grid.Set_column_width({'Channel': 120, 'Measurement': 300, 'Value': 200}), name='Per column', width=180)
+            WGV.Button(lambda: grid.Set_column_width(None), name='Fit width', width=180)
 
 
 def controls_page():

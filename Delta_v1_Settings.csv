@@ -1,0 +1,7 @@
+Name,Value
+RS232_1_Port,ttyS2
+RS232_1_Baud,19200
+RS232_1_Parity,NONE
+RS232_1_Flow,Rts/Cts
+RS232_1_Timeout,3.01
+Com_Log_1_Commands,*IDN?3

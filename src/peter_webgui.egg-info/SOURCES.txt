@@ -16,6 +16,7 @@ src/peter_webgui.egg-info/entry_points.txt
 src/peter_webgui.egg-info/requires.txt
 src/peter_webgui.egg-info/top_level.txt
 src/peter_webgui/apps/__init__.py
+src/peter_webgui/apps/delta_v1.py
 src/peter_webgui/apps/hp34401a_gui.py
 src/peter_webgui/apps/hp34970a_gui.py
 src/peter_webgui/apps/multipage_demo.py

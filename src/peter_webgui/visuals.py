@@ -128,6 +128,74 @@ class Text_input:
             ''')
         self.Highlighted = state
 
+class Text_area:
+    """Multi-line text input in the same style as Text_input.
+
+    Enter adds a new line. height is the size of the whole box, and text longer than that scrolls.
+    function_when_changed(text) is called on every edit.
+
+        T = WGV.Text_area(width=600, height=150, default_text='line 1\nline 2')
+        T.Get_text()   # 'line 1\nline 2'
+        T.Get_lines()  # ['line 1', 'line 2']
+    """
+    def __init__(self, width = 500, height = 150, font_size = Default_font_size, background_color = Default_background_color, border_color = Default_border_color, default_text = '', function_when_changed = None):
+        self.background_color = background_color
+        self.border_color = border_color
+        self.Highlighted = False
+        self.Blinking = False
+        self.function_when_changed = function_when_changed
+
+        border_width = 3
+        padding = 8
+        # Quasar colours the field's inner control with the theme's primary blue, and 'inherit' would pick that up,
+        # so the text colour reaches the native textarea through the --wgv-text-color variable instead.
+        text_height = height - 2 * (border_width + padding)
+
+        self.Text_area_element = ui.textarea(value=default_text,
+                                             on_change=lambda e: self.function_when_changed(e.value) if self.function_when_changed else None) \
+            .props(f'borderless input-style="color: var(--wgv-text-color); font-size: inherit; font-weight: inherit; '
+                   f'height: {Number_to_Pixel(text_height)}; min-height: {Number_to_Pixel(text_height)}; resize: none; line-height: 1.4;"') \
+            .style(f'''
+                --wgv-text-color: {self.border_color};
+                background-color: {self.background_color} !important;
+                color: {self.border_color} !important;
+                border: {Number_to_Pixel(border_width)} solid {self.border_color} !important;
+                border-radius: 0 !important;
+
+                width: {Number_to_Pixel(width)};
+                height: {Number_to_Pixel(height)} !important;
+                padding: {Number_to_Pixel(padding)} 14px !important;
+                font-size: {Number_to_Pixel(font_size)} !important;
+                font-weight: bold !important;
+            ''')
+        Blinkable.append(self)
+
+    def Get_text(self):
+        return self.Text_area_element.value or ''
+
+    def Get_lines(self):
+        return self.Get_text().splitlines()
+
+    def Set_text(self, text):
+        self.Text_area_element.set_value(text)
+
+    def Highlight(self, state):
+        if(state):
+            self.Text_area_element.style(f'''
+                --wgv-text-color: {self.background_color};
+                background-color: {self.border_color} !important;
+                color: {self.background_color} !important;
+                border: 3px solid {self.background_color} !important;
+            ''')
+        else:
+            self.Text_area_element.style(f'''
+                --wgv-text-color: {self.border_color};
+                background-color: {self.background_color} !important;
+                color: {self.border_color} !important;
+                border: 3px solid {self.border_color} !important;
+            ''')
+        self.Highlighted = state
+
 class Progress_bar:
     def __init__(self, width = Default_width, height = Default_height, font_size = Default_font_size, color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
         self.color = color
@@ -498,67 +566,102 @@ def Create_Dropdown_Card_With_Name(name, function_to_call= None, options = [], t
             Create_Label_Right_Bold(text = name, font_size = font_size, width = text_width, height = 40, color = color, background_color = None)
             return Create_Dropdown_Card(function_to_call = function_to_call, options = options, width = dropdown_width, height = 32, font_size = font_size, color = color, background_color = background_color, border_color = border_color, border_width = 0, editable = editable)
 
-def Create_Grid(data, width=Default_box_width, height=Default_box_height, editable = False, header_color = Default_color, background_color = Default_background_color, border_color = Default_border_color):
+def Grid_column_def(column, editable = False, column_width = None):
+    """AG Grid column definition for one column.
+
+    column_width: None (no fixed width), a number of pixels for every column,
+    or a dict {column name: pixels} for some columns (the others get AG Grid's default of 200 px).
+    """
+    column_def = {'field': str(column), 'editable': editable}
+    if isinstance(column_width, dict):
+        if column in column_width:
+            column_def['width'] = column_width[column]
+        elif str(column) in column_width:
+            column_def['width'] = column_width[str(column)]
+    elif column_width is not None:
+        column_def['width'] = column_width
+    return column_def
+
+def Create_Grid(data, width=Default_box_width, height=Default_box_height, editable = False, header_color = Default_color, background_color = Default_background_color, border_color = Default_border_color, column_width = None):
+    """AG Grid styled like the other WGV widgets.
+
+    column_width: None (default) stretches the columns to fill the grid width. A number gives every column that
+    width in pixels, and a dict {column name: pixels} sets individual columns. With a fixed width the columns may
+    not fill the grid, or may need horizontal scrolling.
+    """
 
     grid_id = f"dashboard-grid-{uuid.uuid4().hex}"
 
+    # AG Grid (v33+, NiceGUI 3/4) takes its colours from theme CSS variables. Setting them on the grid element
+    # covers every part of it, including the empty space below the last row, which otherwise stays white.
+    theme_variables = f'''
+        --ag-background-color: {background_color};
+        --ag-odd-row-background-color: {background_color};
+        --ag-chrome-background-color: {background_color};
+        --ag-header-background-color: {header_color};
+        --ag-foreground-color: {border_color};
+        --ag-text-color: {border_color};
+        --ag-header-text-color: {border_color};
+        --ag-cell-text-color: {border_color};
+        --ag-border-color: {border_color};
+        --ag-row-border: 1px solid {border_color};
+        --ag-column-border: none;            /* the full-height resize bars below draw the column lines */
+        --ag-header-column-border: none;
+        --ag-wrapper-border: none;
+        --ag-wrapper-border-radius: 0;
+        --ag-border-radius: 0;
+        --ag-font-size: 18px;
+        --ag-header-font-size: 20px;
+        --ag-header-font-weight: bold;
+        --ag-header-column-resize-handle-color: {border_color};
+        --ag-header-column-resize-handle-width: 1px;
+    '''
+    grid_border_width = 2
+    inner_height = height - 2 * grid_border_width
+
     ui.add_head_html(f'''
     <style>
-        /* Only this specific AG Grid */
-        #{grid_id} .ag-root-wrapper {{
-            background-color: {background_color} !important;
-            border-radius: 0 !important;
-            border: none !important;
-        }}
-
-        /* Header */
-        #{grid_id} .ag-header {{
-            background-color: {header_color} !important;
-        }}
-
-        #{grid_id} .ag-header-cell {{
-            border-right: 1px solid {border_color} !important;
-        }}
-
-        #{grid_id} .ag-header-cell-text {{
-            color: {border_color} !important;
-            font-size: 20px !important;
-            font-weight: bold !important;
-        }}
-
-        /* Rows */
-        #{grid_id} .ag-row {{
-            background-color: {background_color} !important;
-        }}
-
+        /* Bold cell text, and no rounded corners anywhere inside this grid */
         #{grid_id} .ag-cell {{
-            color: {border_color} !important;
-            font-size: 18px !important;
             font-weight: bold !important;
-            border-right: 1px solid {border_color} !important;
-            border-top: 1px solid {border_color} !important;
         }}
-
-        /* Remove rounded corners, but ONLY inside this grid */
         #{grid_id},
         #{grid_id} * {{
             border-radius: 0 !important;
+        }}
+
+        /* Column-resize drag bars run the full height of the grid, not just the header.
+           The header containers normally clip their contents, so let the bars hang out below them,
+           and draw the header above the rows so the bars stay on top and can be dragged anywhere. */
+        #{grid_id} .ag-header,
+        #{grid_id} .ag-header-viewport,
+        #{grid_id} .ag-header-container,
+        #{grid_id} .ag-header-row,
+        #{grid_id} .ag-header-cell {{
+            overflow: visible !important;
+        }}
+        #{grid_id} .ag-header {{
+            position: relative;
+            z-index: 3;
+        }}
+        #{grid_id} .ag-header-cell-resize {{
+            height: {Number_to_Pixel(inner_height)} !important;
+        }}
+        #{grid_id} .ag-header-cell-resize::after {{
+            height: 100% !important;
+            top: 0 !important;
         }}
     </style>
     ''')
 
     return ui.aggrid({
-        'columnDefs': [
-            {'field': col,
-            'editable': editable
-             }
-            for col in data.columns
-        ],
+        'columnDefs': [Grid_column_def(col, editable, column_width) for col in data.columns],
         'rowData': data.to_dict('records'),
-    }).props(f'id="{grid_id}"').style(f'''
+    }, auto_size_columns = column_width is None).props(f'id="{grid_id}"').style(f'''
         width: {Number_to_Pixel(width)};
         height: {Number_to_Pixel(height)};
-        border: 2px solid {border_color};
+        border: {Number_to_Pixel(grid_border_width)} solid {border_color};
+        {theme_variables}
     ''')
 
 class Grid:
@@ -570,9 +673,12 @@ class Grid:
         editable=False,
         header_color=Default_color,
         background_color=Default_background_color,
-        border_color=Default_border_color
+        border_color=Default_border_color,
+        column_width=None
     ):
+        """column_width: None (fit columns to the grid width), pixels for every column, or {column name: pixels}."""
         self.Editable = editable
+        self.Column_width = column_width
         self.Grid_element = Create_Grid(
             data,
             width,
@@ -580,15 +686,23 @@ class Grid:
             editable,
             header_color,
             background_color,
-            border_color
+            border_color,
+            column_width
         )
+
+    def Set_column_width(self, column_width):
+        """Change the column widths: None (fit to the grid width), pixels for every column, or {column name: pixels}."""
+        self.Column_width = column_width
+        self.Grid_element.options['columnDefs'] = [
+            Grid_column_def(col['field'], self.Editable, column_width)
+            for col in self.Grid_element.options['columnDefs']
+        ]
+        self.Grid_element.auto_size_columns = column_width is None
+        self.Grid_element.update()
 
     def update_from_df(self, df):
         self.Grid_element.options['columnDefs'] = [
-            {
-                'field': str(col),
-                'editable': self.Editable
-            }
+            Grid_column_def(col, self.Editable, self.Column_width)
             for col in df.columns
         ]
 
@@ -613,10 +727,7 @@ class Grid:
             raise ValueError(f"Column '{column_name}' already exists.")
 
         # Add the new column definition
-        column_defs.append({
-            'field': str(column_name),
-            'editable': self.Editable
-        })
+        column_defs.append(Grid_column_def(column_name, self.Editable, self.Column_width))
 
         # Populate the new column in every existing row
         for row in row_data:
