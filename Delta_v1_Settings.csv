@@ -1,7 +1,131 @@
 Name,Value
-RS232_1_Port,ttyS2
-RS232_1_Baud,19200
+RS232_1_Port,ttyUSB0
+RS232_1_Baud,115200
 RS232_1_Parity,NONE
-RS232_1_Flow,Rts/Cts
-RS232_1_Timeout,3.01
-Com_Log_1_Commands,*IDN?3
+RS232_1_Flow,NONE
+RS232_1_Timeout,1.0
+Com_Log_1_Commands,"*IDN?
+$Delay_ms 1000
+*IDN?"
+Com_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui/examples/data/
+Com_File_1_Extensions,.txt
+Com_File_1_Filename,test.txt
+Log_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui/examples/data/
+Log_File_1_Extensions,.csv
+Log_File_1_Filename,data.csv
+I2C_1_Frequency,100000
+I2C_1_Role,MASTER
+I2C_1_Address,0x42
+I2C_1_Reply,FF
+I2C_Log_1_Commands,"# 0.91"" I2C OLED (SSD1306, 128 x 32 pixels, address 0x3C): set up the display and show ""OWO"".
+# Load this file into the I2C Log with ""I2C Data Files"", then press Send all.
+# RW 0x3C 0x00 <bytes> sends display commands (control byte 0x00),
+# RW 0x3C 0x40 <bytes> sends pixel data (control byte 0x40). One data byte = 8 pixels in a column, bit 0 on top.
+# If SCAN does not list 0x3C, try 0x3D (change every 0x3C below).
+SCAN
+
+# --- set up ---
+# display off, clock 0x80, multiplex 32 rows, offset 0, start line 0
+RW 0x3C 0x00 AE D5 80 A8 1F D3 00 40
+# charge pump on, horizontal addressing, mirror columns + rows (A1, C8), COM pins for 32 rows
+RW 0x3C 0x00 8D 14 20 00 A1 C8 DA 02
+# contrast 0x8F, pre-charge 0xF1, VCOMH 0x40, show RAM, not inverted, display on
+RW 0x3C 0x00 81 8F D9 F1 DB 40 A4 A6 AF
+
+# --- clear the screen: columns 0..127, pages 0..3 = 512 bytes of 00, 64 per line ---
+RW 0x3C 0x00 21 00 7F 22 00 03
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+RW 0x3C 0x40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# --- ""OWO"": 4x scaled 8x8 letters, columns 8..119, pages 0..3, one page per line ---
+RW 0x3C 0x00 21 08 77 22 00 03
+RW 0x3C 0x40 00 00 00 00 F0 F0 F0 F0 FF FF FF FF 0F 0F 0F 0F 0F 0F 0F 0F FF FF FF FF F0 F0 F0 F0 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 F0 F0 F0 F0 FF FF FF FF 0F 0F 0F 0F 0F 0F 0F 0F FF FF FF FF F0 F0 F0 F0 00 00 00 00
+RW 0x3C 0x40 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 F0 F0 F0 F0 F0 F0 F0 F0 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF
+RW 0x3C 0x40 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF F0 F0 F0 F0 FF FF FF FF FF FF FF FF F0 F0 F0 F0 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF
+RW 0x3C 0x40 00 00 00 00 0F 0F 0F 0F FF FF FF FF F0 F0 F0 F0 F0 F0 F0 F0 FF FF FF FF 0F 0F 0F 0F 00 00 00 00 00 00 00 00 00 00 00 00 0F 0F 0F 0F FF FF FF FF 0F 0F 0F 0F 00 00 00 00 00 00 00 00 0F 0F 0F 0F FF FF FF FF 0F 0F 0F 0F 00 00 00 00 00 00 00 00 00 00 00 00 0F 0F 0F 0F FF FF FF FF F0 F0 F0 F0 F0 F0 F0 F0 FF FF FF FF 0F 0F 0F 0F 00 00 00 00
+"
+I2C_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+I2C_File_1_Extensions,.txt
+I2C_File_1_Filename,i2c_data.txt
+I2C_Log_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+I2C_Log_File_1_Extensions,.csv
+I2C_Log_File_1_Filename,i2c_log.csv
+Com_Log_1_Delay,0.0
+I2C_Log_1_Delay,0.0
+Instrument_Finder_1_No,1
+SPI_1_Frequency,14000000
+SPI_1_Mode,0
+SPI_1_Order,MSB
+SPI_1_Role,MASTER
+SPI_1_Reply,FF
+SPI_Log_1_Commands,"# One transfer per line (# starts a comment):
+# T   <cs> <hex>     transfer (send + receive)
+# POL <cs> LOW|HIGH  chip select active level
+# SR                 read the bytes received in the SLAVE role
+T 0 9F 00 00 00
+"
+SPI_Log_1_Delay,0.0
+SPI_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+SPI_File_1_Extensions,.txt
+SPI_File_1_Filename,spi_data.txt
+SPI_Log_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+SPI_Log_File_1_Extensions,.csv
+SPI_Log_File_1_Filename,spi_log.csv
+RS485_1_Baud,115200
+RS485_1_Parity,NONE
+RS485_1_Stop,1
+RS485_Log_1_Commands,"# One message per line (# starts a comment):
+# W  <text>  send text
+# WH <hex>   send bytes
+# R          read what was received
+# C  /  CLR  bytes waiting / empty the receive buffer
+W Hello\r\n
+"
+RS485_Log_1_Delay,0.0
+RS485_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+RS485_File_1_Extensions,.txt
+RS485_File_1_Filename,rs485_data.txt
+RS485_Log_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+RS485_Log_File_1_Extensions,.csv
+RS485_Log_File_1_Filename,rs485_log.csv
+GPIO_1_Pin,1
+GPIO_1_Mode,ANALOG
+GPIO_1_Pull,DOWN
+GPIO_Log_1_Commands,"# One command per line (# starts a comment):
+# MODE <n> IN|OUT|ANALOG  pin mode
+# PULL <n> NONE|UP|DOWN   pull resistor
+# W <n> 0|1   R <n>       set an output / read a pin
+# A <n>   V <n>           analog: raw 0..4095 / volts
+# MQ <n>                  read the pin mode
+# B <n>   BALL            read one button / all five
+BALL
+"
+GPIO_Log_1_Delay,0.0
+GPIO_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+GPIO_File_1_Extensions,.txt
+GPIO_File_1_Filename,gpio_data.txt
+GPIO_Log_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+GPIO_Log_File_1_Extensions,.csv
+GPIO_Log_File_1_Filename,gpio_log.csv
+CAN_1_Bitrate,500000
+CAN_1_Mode,NORMAL
+CAN_1_Enable,OFF
+CAN_Log_1_Commands,"# One frame per line (# starts a comment):
+# W <id> [hex]  send a data frame
+# R             read the oldest received frame
+# C             frames waiting
+C
+"
+CAN_Log_1_Delay,0.0
+CAN_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+CAN_File_1_Extensions,.txt
+CAN_File_1_Filename,can_data.txt
+CAN_Log_File_1_Folder,/home/fujitsu/Desktop/python/Github_Repostories/Peter_WebGui
+CAN_Log_File_1_Extensions,.csv
+CAN_Log_File_1_Filename,can_log.csv

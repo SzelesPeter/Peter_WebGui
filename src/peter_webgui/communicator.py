@@ -67,6 +67,7 @@ class Communicator:
         self.message_line_in_function = message_line_in_function
         self.max_number_of_messages_out = max_number_of_messages_out
         self.generate_log_function = generate_log_function
+        self.log_functions = []   # extra listeners, see Add_log_function
         self.message_out_request_list = np.empty(0, dtype=Message_request)
         self.message_out_sent_list = np.empty(0, dtype=Message_sent)
         self.last_message_send_time = Time.Start_Measureing_Elapsed_Time()
@@ -75,8 +76,25 @@ class Communicator:
     def Set_generate_log_function(self, generate_log_function):
         self.generate_log_function = generate_log_function
 
+    def Add_log_function(self, log_function):
+        """Add a listener that gets every log entry, next to generate_log_function. Several widgets can listen at once."""
+        self.log_functions = self.log_functions + [log_function]
+
+    def Remove_log_function(self, log_function):
+        self.log_functions = [f for f in self.log_functions if f is not log_function]
+
+    def _Generate_log(self, *args):
+        # Called from the worker threads. The list is replaced (never changed in place), so iterating is safe.
+        if self.generate_log_function != None:
+            self.generate_log_function(*args)
+        for log_function in self.log_functions:
+            log_function(*args)
+
     def Message_out_request(self, message_out, callback_function = None, timeout = 0, message_delay_after = 0, callback_args = (), callback_kwargs = None):
         """Queue message_out for sending.
+
+        message_out=None queues a pause instead: nothing is sent, the queue just waits message_delay_after seconds
+        (after the messages before it are finished) before the next message. See Pause_request.
 
         When the reply line arrives, it is passed to the callback as
         callback_function(message_in, *callback_args, **callback_kwargs), so extra values can travel with the request:
@@ -86,6 +104,10 @@ class Communicator:
             def Store_Reading(message_in, channel, unit='V'): ...
         """
         self.message_out_request_list = np.append(self.message_out_request_list, Message_request(message_out, Time.Get_Time_text(), callback_function, timeout, message_delay_after, callback_args, callback_kwargs))
+
+    def Pause_request(self, seconds):
+        """Queue a pause: the next message goes out `seconds` after the earlier ones are finished."""
+        self.Message_out_request(message_out=None, message_delay_after=seconds)
 
     def Start(self):
         self.message_out_request_list = np.empty(0, dtype=Message_request)
@@ -108,6 +130,10 @@ class Communicator:
                     if len(self.message_out_request_list) != 0:
                         Message_request_object: Message_request = self.message_out_request_list[0]
                         self.message_out_request_list = np.delete(self.message_out_request_list, 0)
+                        if Message_request_object.message_out is None:   # a pause (Pause_request): wait, send nothing
+                            self.message_delay_after = Message_request_object.message_delay_after
+                            self.last_message_send_time = Time.Start_Measureing_Elapsed_Time()
+                            return
                         timeout = Message_request_object.message_timeout
                         if timeout != 0:
                             for message in self.message_out_sent_list:
@@ -133,46 +159,65 @@ class Communicator:
                     self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
                     if Message_sent_object.callback_function != None:
                         Message_sent_object.callback_function(message_in, *Message_sent_object.callback_args, **Message_sent_object.callback_kwargs)
-                    if self.generate_log_function != None:
-                        self.generate_log_function(Message_sent_object.message_request_time,
-                                                   Message_sent_object.message_out_time,
-                                                   Message_sent_object.message_out,
-                                                   Time.Get_Time_text(),
-                                                   message_in,
-                                                   str(len(self.message_out_sent_list)))
+                    self._Generate_log(Message_sent_object.message_request_time,
+                                       Message_sent_object.message_out_time,
+                                       Message_sent_object.message_out,
+                                       Time.Get_Time_text(),
+                                       message_in,
+                                       str(len(self.message_out_sent_list)))
                 else:
-                    if self.generate_log_function != None:
-                        self.generate_log_function('', '', '', Time.Get_Time_text(), message_in, 'Unexpected!')
+                    self._Generate_log('', '', '', Time.Get_Time_text(), message_in, 'Unexpected!')
             else:
                 if len(self.message_out_sent_list != 0):
                     if self.message_out_sent_list[0].message_timeout == 0:
-                        if self.generate_log_function != None:
-                            Message_sent_object: Message_sent = self.message_out_sent_list[0]
-                            self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
-                            self.generate_log_function(Message_sent_object.message_request_time,
-                                                       Message_sent_object.message_out_time,
-                                                       Message_sent_object.message_out,
-                                                       '',
-                                                       '',
-                                                       str(len(self.message_out_sent_list)))
+                        # No reply expected: retire it on the next empty read, whether or not anything is logging.
+                        Message_sent_object: Message_sent = self.message_out_sent_list[0]
+                        self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
+                        self._Generate_log(Message_sent_object.message_request_time,
+                                           Message_sent_object.message_out_time,
+                                           Message_sent_object.message_out,
+                                           '',
+                                           '',
+                                           str(len(self.message_out_sent_list)))
                     else:
                         if self.message_out_sent_list[-1].message_timeout <= Time.Time_Elapsed_Since_Start(self.message_out_sent_list[-1].timeout_start_time):
                             Message_sent_object: Message_sent = self.message_out_sent_list[0]
                             self.message_out_sent_list = np.delete(self.message_out_sent_list, 0)
                             #if Message_sent_object.callback_function != None:
                                 #Message_sent_object.callback_function('')
-                            if self.generate_log_function != None:   
-                                self.generate_log_function(Message_sent_object.message_request_time,
-                                                       Message_sent_object.message_out_time,
-                                                       Message_sent_object.message_out,
-                                                       '',
-                                                       '',
-                                                       'Timeout!')
+                            self._Generate_log(Message_sent_object.message_request_time,
+                                               Message_sent_object.message_out_time,
+                                               Message_sent_object.message_out,
+                                               '',
+                                               '',
+                                               'Timeout!')
 
 
 
 from nicegui import ui, run
 import threading
+import re
+
+
+def Parse_directive(line):
+    """A '$' line of a log widget's command box. Returns ('delay', seconds); raises ValueError for anything else.
+
+        $Delay_ms 500     wait 500 ms (after the previous line is finished) before sending the next line
+    """
+    m = re.fullmatch(r'\$\s*(\w+)\s*(.*)', line.strip())
+    if not m:
+        raise ValueError(f'not a $ line: {line!r}')
+    name, argument = m[1].upper(), m[2].strip()
+    if name == 'DELAY_MS':
+        try:
+            ms = float(argument)
+        except ValueError:
+            raise ValueError(f'usage: $Delay_ms <ms>, e.g. $Delay_ms 500 (got {line.strip()!r})')
+        if not 0 <= ms <= 3600000:
+            raise ValueError(f'$Delay_ms must be 0..3600000 ms, not {argument}')
+        return 'delay', ms / 1000
+    raise ValueError(f'unknown $ command {m[1]!r} (known: $Delay_ms <ms>)')
+
 from peter_webgui import visuals as WGV
 from peter_webgui import trace_manager as TM
 import pandas as pd
@@ -225,19 +270,26 @@ class Communicator_Log_v2:
         Sent        a command with no reply expected (it does not end in '?')
         Timeout     a query got no reply within its timeout
         Unexpected  a line arrived when no message was waiting for a reply
+        Syntax      a $ line that could not be read (nothing was sent)
 
     Lines ending in '?' are sent as queries with query_timeout seconds to answer. Other lines are sent as commands
-    with no reply expected. Blank lines are skipped.
+    with no reply expected. Blank lines and lines starting with # are skipped. Lines starting with $ are
+    instructions for the widget, not sent: "$Delay_ms 500" waits 500 ms (after the previous line is finished)
+    before the next line. A $ line that can't be read gets a Syntax row. The Delay input (in ms; message_delay is in seconds) sets how
+    long the communicator waits after each of these messages before sending the next one.
 
-    The widget sets itself as the communicator's log function and refreshes its grid with its own ui.timer.
+    The widget adds itself as one of the communicator's log listeners (Communicator.Add_log_function) and refreshes
+    its grid with its own ui.timer.
     Something else must still run Communicator.Message_out_worker / Message_in_worker.
     """
     Columns = ['Out time', 'Out message', 'Response time', 'Response message', 'Status']
+    Highlight_statuses = ('Timeout', 'Unexpected', 'Syntax')
 
-    def __init__(self, name, communicator: Communicator, width = 1400, height = 500, default_commands = '*IDN?', query_timeout = 1, command_delay_after = 0):
+    def __init__(self, name, communicator: Communicator, width = 1280, height = 500, default_commands = '*IDN?', query_timeout = 1, message_delay = 0, function_when_delay_changed = None):
         self.communicator = communicator
         self.query_timeout = query_timeout
-        self.command_delay_after = command_delay_after
+        self.message_delay = message_delay                            # seconds to wait after each sent message
+        self.function_when_delay_changed = function_when_delay_changed   # called with the new delay, e.g. to save it
         self.Log_rows = []
         self.Log_lock = threading.Lock()
         self.Log_changed = False
@@ -256,29 +308,63 @@ class Communicator_Log_v2:
                     self.Commands = WGV.Text_area(width=commands_width, height=inner_height - button_height - gap, default_text=default_commands)
                     self.G_Log = WGV.Grid(data=pd.DataFrame(columns=self.Columns), width=inner_width - commands_width - gap, height=inner_height - button_height - gap)
                 with ui.row().style(f'gap: {WGV.Number_to_Pixel(gap)}; flex-wrap: nowrap;'):
-                    button_width = (inner_width - 2 * gap) / 3  # three buttons spanning the whole inner width
+                    delay_text_width, delay_number_width = 110, 100
+                    delay_width = delay_text_width + delay_number_width + 49   # Number_input's full width, with its arrows
+                    button_width = (inner_width - delay_width - 3 * gap) / 3   # three buttons + the delay input span the inner width
                     self.B_Send = WGV.Button(lambda: self.Send_all(), name='Send all', width=button_width, background_color=WGV.Default_color)
                     self.B_Clear_commands = WGV.Button(lambda: self.Commands.Set_text(''), name='Clear cmds', width=button_width)
                     self.B_Clear_log = WGV.Button(lambda: self.Clear_log(), name='Clear log', width=button_width)
+                    # The input is in ms; message_delay (and the communicator) use seconds.
+                    self.NI_Delay = WGV.Number_input(name='Delay [ms]:', number_function=lambda ms: self.Set_message_delay(ms / 1000),
+                                                     text_width=delay_text_width, number_width=delay_number_width,
+                                                     default_value=round(message_delay * 1000, 3), min=0, max=60000)
                 
-                # Timeout and Unexpected rows stand out in the accent colour
+                # Statuses in Highlight_statuses (Timeout, Unexpected, ...) stand out in the accent colour
+                highlight = ' || '.join(f"params.value === '{status}'" for status in self.Highlight_statuses)
                 for column_def in self.G_Log.Grid_element.options['columnDefs']:
                     if column_def['field'] == 'Status':
-                        column_def[':cellStyle'] = (f"params => (params.value === 'Timeout' || params.value === 'Unexpected') "
-                                                    f"? {{backgroundColor: '{WGV.Default_color}'}} : null")
+                        column_def[':cellStyle'] = f"params => ({highlight}) ? {{backgroundColor: '{WGV.Default_color}'}} : null"
 
-        self.communicator.Set_generate_log_function(self.Log)
+        # One listener per widget, so several log widgets (and browser tabs) can watch the same communicator.
+        # The listener is removed when this tab's client is deleted.
+        self.communicator.Add_log_function(self.Log)
+        ui.context.client.on_delete(lambda: self.communicator.Remove_log_function(self.Log))
         ui.timer(0.2, self.Update)
 
     def Send_all(self):
         for line in self.Commands.Get_lines():
             command = line.strip()
-            if command == '':
+            if command == '' or command.startswith('#'):
+                continue
+            if command.startswith('$'):
+                self.Run_directive(command)
                 continue
             if command.endswith('?'):
-                self.communicator.Message_out_request(message_out=command, timeout=self.query_timeout)
+                self.communicator.Message_out_request(message_out=command, timeout=self.query_timeout, message_delay_after=self.message_delay)
             else:
-                self.communicator.Message_out_request(message_out=command, message_delay_after=self.command_delay_after)
+                self.communicator.Message_out_request(message_out=command, message_delay_after=self.message_delay)
+
+    def Run_directive(self, line):
+        """A '$' line (Parse_directive), e.g. $Delay_ms 500: queue a pause. A bad one gets a Syntax row."""
+        try:
+            kind, value = Parse_directive(line)
+        except ValueError as e:
+            self.Add_syntax_row(line, str(e))
+            return
+        if kind == 'delay':
+            self.communicator.Pause_request(value)
+
+    def Add_syntax_row(self, line, message):
+        with self.Log_lock:
+            self.Log_rows.append({'Out time': Time.Get_Time_text(), 'Out message': line, 'Response time': '',
+                                  'Response message': message, 'Status': 'Syntax'})
+            self.Log_changed = True
+
+    def Set_message_delay(self, value):
+        """Delay in seconds after each message this widget sends (the Delay input shows it in ms). Applies to the next Send all."""
+        self.message_delay = float(value)
+        if self.function_when_delay_changed:
+            self.function_when_delay_changed(self.message_delay)
 
     def Log(self, time_request, time_out, data_out, time_in, data_in, messages_out):
         """generate_log_function for Communicator. Can be called from worker threads."""
@@ -303,6 +389,13 @@ class Communicator_Log_v2:
     def Get_log_df(self):
         with self.Log_lock:
             return pd.DataFrame(self.Log_rows, columns=self.Columns)
+
+    def Set_log_df(self, df):
+        """Replace the log with the rows of df (e.g. a CSV saved from Get_log_df). Missing columns are left empty."""
+        rows = df.reindex(columns=self.Columns).fillna('').to_dict('records')
+        with self.Log_lock:
+            self.Log_rows = rows
+            self.Log_changed = True
 
     def Update(self):
         with self.Log_lock:

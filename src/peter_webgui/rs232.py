@@ -9,6 +9,7 @@ Windows = os.name == 'nt'
 
 def Port_Path(port: str) -> str:
     """Return the OS-specific device path for a port name."""
+    port = port or ''   # no port chosen
     if Windows or port.startswith('/dev/'):
         return port
     return '/dev/' + port
@@ -24,6 +25,13 @@ class RS232:
         self.Parity = Parity #["NONE", "ODD", "EVEN"]
         self.Flow = Flow #["NONE", "Dsr/Dtr", "Rts/Cts", "Xon/Xoff"]
         self.Timeout = Timeout
+        self.open_functions = []   # called after every successful Open(), see Add_open_function
+        self.Scanning = False      # True while Find_IDE tries the ports; those opens don't count as connecting
+
+    def Add_open_function(self, function):
+        """function() is called each time the port is opened (Connect button, Instrument_Finder, ...), but not
+        while Find_IDE is probing ports. Use it for set-up that should happen on every connect."""
+        self.open_functions = self.open_functions + [function]
 
     def Get_Port(self):
         return self.Port
@@ -96,6 +104,9 @@ class RS232:
                 Error = "Port: " + Port_Path(self.Port) + " cant be opened!"
             print(self.ser.is_open)
             print(self.ser.port)
+            if Error is None and not self.Scanning:
+                for function in self.open_functions:
+                    function()
         return Error
 
     def Close(self):
@@ -159,7 +170,25 @@ class RS232:
         else:
             return ""
 
+    @staticmethod
+    def Same_serial_no(wanted, found):
+        """'001' matches 1 or '1' as well as '001': the serial number often comes from a number input."""
+        wanted, found = str(wanted).strip(), str(found).strip()
+        if wanted == found:
+            return True
+        try:
+            return float(wanted) == float(found)
+        except ValueError:
+            return False
+
     def Find_IDE(self, maker, name, no):
+        self.Scanning = True
+        try:
+            return self._Find_IDE(maker, name, no)
+        finally:
+            self.Scanning = False
+
+    def _Find_IDE(self, maker, name, no):
         self.Close()
         Com_ports = self.Get_Possible_Ports()
         timeout = self.Get_Timeout()
@@ -170,10 +199,10 @@ class RS232:
                 self.Write_Line('*IDN?')
                 instrument_IDE = self.Read_Line()
                 if instrument_IDE != '':
-                    instrument_IDE = instrument_IDE.split(',')
+                    instrument_IDE = [field.strip() for field in instrument_IDE.split(',')]
                     if len(instrument_IDE) == 4:
                         if no != None:
-                            if (maker == instrument_IDE[0]) and (name == instrument_IDE[1]) and (str(no) == instrument_IDE[2]):
+                            if (maker == instrument_IDE[0]) and (name == instrument_IDE[1]) and self.Same_serial_no(no, instrument_IDE[2]):
                                 self.Set_Timeout(timeout)
                                 self.Close()
                                 return port, instrument_IDE
@@ -191,24 +220,30 @@ from nicegui import ui
 from peter_webgui import visuals as WGV
 
 class RS232_GUI:
-    def __init__(self,name: str, RS232: RS232):
+    def __init__(self, name: str, RS232: RS232, width = 320, height = 450):
         self.RS232 = RS232
-        with WGV.Card(name= name, width= 310, height= 450):
+        dropdown_width = width - 150   # 80 px label + gaps + card padding
+        with WGV.Card(name= name, width= width, height= height):
             with ui.row(): # column with no spaceing:
                 self.L_Port = WGV.Create_Label_Right('Port:', font_size= 20, width= 80)
-                self.DDC_Port = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Ports(), function_to_call=self.__DDC_Port_Function_internal, width= 160)
+                # The saved port stays in the list even when it isn't plugged in: a value missing from the options
+                # would make the dropdown change it to None.
+                ports = self.RS232.Get_Possible_Ports()
+                if self.RS232.Get_Port() and self.RS232.Get_Port() not in ports:
+                    ports.append(self.RS232.Get_Port())
+                self.DDC_Port = WGV.Create_Dropdown_Card(options=ports, function_to_call=self.__DDC_Port_Function_internal, width= dropdown_width)
                 self.DDC_Port.set_value(self.RS232.Get_Port())
             with ui.row():
                 self.L_Baud = WGV.Create_Label_Right('Baud:', font_size= 20, width= 80)
-                self.DDC_Baud = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Bauds(), function_to_call=self.__DDC_Baud_Function_internal, width= 160)
+                self.DDC_Baud = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Bauds(), function_to_call=self.__DDC_Baud_Function_internal, width= dropdown_width)
                 self.DDC_Baud.set_value(self.RS232.Get_Baud())
             with ui.row():
                 self.L_Parity = WGV.Create_Label_Right('Parity:', font_size= 20, width= 80)
-                self.DDC_Parity = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Paritys(), function_to_call=self.__DDC_Parity_Function_internal, width= 160)
+                self.DDC_Parity = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Paritys(), function_to_call=self.__DDC_Parity_Function_internal, width= dropdown_width)
                 self.DDC_Parity.set_value(self.RS232.Get_Parity())
             with ui.row():
                 self.L_Flow = WGV.Create_Label_Right('Flow:', font_size= 20, width= 80)
-                self.DDC_Flow = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Flows(), function_to_call=self.__DDC_Flow_Function_internal, width= 160)
+                self.DDC_Flow = WGV.Create_Dropdown_Card(options=self.RS232.Get_Possible_Flows(), function_to_call=self.__DDC_Flow_Function_internal, width= dropdown_width)
                 self.DDC_Flow.set_value(self.RS232.Get_Flow())
             with ui.row():
                 self.L_Timeout = WGV.Create_Label_Right('Timeout:', font_size= 20, width= 80)
@@ -217,12 +252,17 @@ class RS232_GUI:
                 self.B_Connect = WGV.Button(lambda: self.B_Connect_Function(), name='Connect', width= 120,background_color = '#B12C2C')
                 self.B_Disconnect = WGV.Button(lambda: self.B_Disconnect_Function(), name='Disconnect', width= 120)
             with ui.row():
-                self.L_Connected = WGV.Create_Label_Left('Not Connected', font_size= 20, width = 200)
+                self.L_Connected = WGV.Create_Label_Left('Connected' if self.RS232.ser.is_open else 'Not Connected', font_size= 20, width = 200)
                 
     def Update_DDC_Port_list(self):
-        self.DDC_Port.set_options(self.RS232.Get_Possible_Ports())
+        ports = self.RS232.Get_Possible_Ports()
+        if self.RS232.Get_Port() and self.RS232.Get_Port() not in ports:
+            ports.append(self.RS232.Get_Port())   # keep the chosen port listed, see __init__
+        self.DDC_Port.set_options(ports, value=self.RS232.Get_Port())
 
     def __DDC_Port_Function_internal(self, port: str):
+        if not port:
+            return   # the dropdown was cleared; keep the port that was set
         self.RS232.Set_Port(port)
         self.Update_DDC_Port_list()
 

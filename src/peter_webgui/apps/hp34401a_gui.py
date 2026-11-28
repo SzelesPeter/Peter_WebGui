@@ -12,6 +12,7 @@ from peter_webgui import rs232 as RS232
 import pandas as pd
 from peter_webgui import settings as Settings
 from peter_webgui import trace_manager as TM
+from peter_webgui import instrument_visuals as IV
 import threading
 
 from peter_webgui import svg as SVG
@@ -500,104 +501,6 @@ def create_diagram():
 
 
 
-class Error_Log:
-    def __init__(self, name, Instrument):
-        self.Instrument = Instrument
-        self.Error_Data = TM.General_Data([
-                            'Time',
-                            'Number',
-                            'Description',
-        ])
-        with WGV.Card(name= 'HP 34401A ERRORS', width= 1840, height= 400):
-            self.G_Log = WGV.Grid(data=self.Error_Data.df,width= 1800)
-
-    def Update(self):
-        if len(self.Instrument.ERROR) != 0:
-            for i in range(len(self.Instrument.ERROR)):
-                ERROR = self.Instrument.ERROR.pop()
-                self.Error_Data.Add_measurement_point([Time.Get_Time_text(), ERROR[0], ERROR[1]])
-            self.G_Log.Grid_element.options['rowData'] = self.Error_Data.df.to_dict('records')
-            self.G_Log.Grid_element.run_grid_method(
-            'ensureIndexVisible',
-            len(self.G_Log.Grid_element.options['rowData']) - 1,
-            'bottom'
-            )
-
-
-
-
-
-
-
-
-
-
-class Instrument_Finder:
-    def __init__(self,name: str, RS232: RS232.RS232, Instrument: Agilent_34401A.Instrument, Communicator: Communicator.Communicator = None, Default_No: int = 0, RS232_GUI: RS232.RS232_GUI = None):
-        self.RS232 = RS232
-        self.Instrument = Instrument
-        self.Communicator = Communicator
-        self.RS232_GUI = RS232_GUI
-        with WGV.Card(name= name, width= 310, height= 300):
-            with ui.row():
-                self.B_find = WGV.Button(
-                    lambda: asyncio.create_task(self.find()),
-                    name='Find',
-                    width=120,
-                    background_color='#B12C2C'
-                )
-                self.B_find = WGV.Button(
-                    lambda: asyncio.create_task(self.find(self.NI_No.Number_input_element.value)),
-                    name='Find No.',
-                    width=120,
-                    background_color='#DF9439'
-                )
-            with ui.row():
-                self.NI_No = WGV.Number_input(name = 'Serial No.: ', text_width = 100, number_width = 100, default_value = Default_No, min = 0, max = 9999)
-            with ui.row():
-                self.Lport1 = WGV.Create_Label_Right_Bold('Port: ', font_size= 20, width = 120)
-                self.Lport2 = WGV.Create_Label_Left_Bold('', font_size= 20, width = 90)
-            with ui.row():
-                self.Lno1 = WGV.Create_Label_Right_Bold('Serial No.: ', font_size= 20, width = 120)
-                self.Lno2 = WGV.Create_Label_Left_Bold('', font_size= 20, width = 90)
-                
-    async def find(self, No: int= None):
-        self.Lport2.set_text('Searching...')
-        self.Lno2.set_text('')
-
-        if self.Communicator != None:
-            self.Communicator.Stop()
-        if self.RS232_GUI != None:
-            self.RS232_GUI.B_Disconnect_Function()
-
-        try:
-            COM, IDE = await run.io_bound(
-                self.RS232.Find_IDE,
-                self.Instrument.Vendor,
-                self.Instrument.Model,
-                No
-            )
-
-            if COM:
-                self.Lport2.set_text(COM)
-                self.Lno2.set_text(IDE[2])
-                if self.RS232_GUI != None:
-                    self.RS232_GUI.DDC_Port_Function(COM)
-                    self.RS232_GUI.B_Connect_Function()
-                if self.Communicator != None:
-                    self.Communicator.Start()
-                return
-            else:
-                self.Lport2.set_text('Not found')
-
-        except Exception as e:
-            self.Lport2.set_text('Error')
-            print(f'Instrument search failed: {e}')
-
-    def Get_No(self):
-        return self.NI_No.Number_input_element.value
-
-
 Running = False
 i = 0
 sweep_thread = None
@@ -612,7 +515,7 @@ def main_page():
     with ui.row():
         with ui.column():
             RS232_GUI_1 = RS232.RS232_GUI('HP 34401A COM Port', RS232_1)
-            Instrument_Finder_1 = Instrument_Finder('HP 34401A Find', RS232_1, Instrument_1, Communicator_1, int(Setting_1.Get_setting("Instrument_Finder_1_No", "0")), RS232_GUI_1)
+            Instrument_Finder_1 = IV.Instrument_Finder('HP 34401A Find', RS232_1, Instrument_1, Communicator_1, int(Setting_1.Get_setting("Instrument_Finder_1_No", "0")), RS232_GUI_1)
             Setting_1.Update_from("Instrument_Finder_1_No", Instrument_Finder_1.Get_No)
             RS232_GUI_2 = RS232.RS232_GUI('SMF COM Port', RS232_2)
 
@@ -815,7 +718,7 @@ def main_page():
 
     Com_Log_1 = Communicator.Communicator_Log('HP 34401A COM Port', Communicator_1)
     Communicator_1.Set_generate_log_function(Com_Log_1.Log)
-    Error_Log_1 = Error_Log("HP34401A ERRORs", Instrument_1)
+    Error_Log_1 = IV.Error_Log("HP 34401A ERRORS", Instrument_1)
 
 
 

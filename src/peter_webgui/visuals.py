@@ -93,9 +93,12 @@ class Text_input:
         self.Highlighted = False
         self.Blinking = False
 
+        # The text colour reaches the native <input> through --wgv-text-color (same as Text_area). Without it the text
+        # takes Quasar's default dark colour unless some other widget on the page happens to add CSS for it.
         self.Text_input_element  = ui.input() \
-            .props('borderless') \
+            .props('borderless input-style="color: var(--wgv-text-color); font-size: inherit; font-weight: inherit;"') \
             .style(f'''
+                --wgv-text-color: {self.border_color};
                 background-color: {self.background_color} !important;
                 color: {self.border_color} !important;
                 border: 3px solid {self.border_color} !important;
@@ -116,12 +119,14 @@ class Text_input:
     def Highlight(self, state):
         if(state):
             self.Text_input_element.style(f'''
+                --wgv-text-color: {self.background_color};
                 background-color: {self.border_color} !important;
                 color: {self.background_color} !important;
                 border: 3px solid {self.background_color} !important;
             ''')
         else:
             self.Text_input_element.style(f'''
+                --wgv-text-color: {self.border_color};
                 background-color: {self.background_color} !important;
                 color: {self.border_color} !important;
                 border: 3px solid {self.border_color} !important;
@@ -371,7 +376,7 @@ class Number_input:
                         Create_Label_Right_Bold(text = name, width = text_width)
                     if number_function != None:
                         self.Number_input_element = ui.number(on_change =lambda e: self.validate(e.value, number_function)).props(
-                            'borderless'
+                            f'borderless input-style="color: {border_color}; font-size: inherit; font-weight: inherit;"'
                         ).style(f'''
                             flex: 1;
                             height: {Number_to_Pixel(height-4)};
@@ -392,7 +397,7 @@ class Number_input:
                         ''')
                     else:
                         self.Number_input_element = ui.number(min = min, max = max).props(
-                            'borderless'
+                            f'borderless input-style="color: {border_color}; font-size: inherit; font-weight: inherit;"'
                         ).style(f'''
                             flex: 1;
                             height: {Number_to_Pixel(height-4)};
@@ -458,6 +463,8 @@ class Number_input:
             if button_function != None:
                 self.B1 = Button(lambda: self.validate(e.value, button_function), name='Set', width= 80, background_color = background_color)
     def validate(self,value, function):
+        if value is None:   # box emptied while typing
+            return
         if value > self.max:
             value = self.max
             self.Number_input_element.set_value(self.max)
@@ -527,7 +534,7 @@ def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_
     if function_to_call != None:
         element = ui.select(
             options=options,
-            value=options[0],
+            value=options[0] if options else None,
             on_change=lambda e: function_to_call(e.value),
             with_input=editable,
             new_value_mode='add-unique',
@@ -546,7 +553,7 @@ def Create_Dropdown_Card(function_to_call = None, options = [], width = Default_
     else:
         element = ui.select(
             options=options,
-            value=options[0],
+            value=options[0] if options else None,
         ).style(f'''
             width: {Number_to_Pixel(width)};
             height: {Number_to_Pixel(height)} !important;
@@ -900,21 +907,28 @@ class Page_Selector:
 
     pages: list of (path, button text) pairs, e.g. [('/', 'Home'), ('/chart', 'Chart')].
     current_path: path of the page this selector is on. Its button is drawn in the accent colour.
-    The default size (310 x 450) matches RS232_GUI, so the two line up in a column.
+    The default size (320 x 450) matches RS232_GUI, so the two line up in a column.
 
         WGV.Page_Selector([('/', 'Home'), ('/chart', 'Chart')], current_path='/')
     """
-    def __init__(self, pages, current_path = None, name = 'Pages', width = 310, height = 450, font_size = Default_font_size, background_color = Default_page_color, border_color = Default_border_color, button_color = Default_background_color, selected_color = Default_color, padding = 20, border_width = 3):
+    def __init__(self, pages, current_path = None, name = 'Pages', width = 320, height = 450, font_size = Default_font_size, background_color = Default_page_color, border_color = Default_border_color, button_color = Default_background_color, selected_color = Default_color, padding = 20, border_width = 3):
         self.pages = list(pages)
         self.current_path = current_path
         self.Buttons = {}
         button_width = width - 2 * (padding + border_width)
+        # Fit all buttons into the card: 16 px gaps if they fit, otherwise 8 px gaps and, if still needed, lower buttons.
+        inner_height = height - 2 * (padding + border_width)
+        count = max(len(self.pages), 1)
+        gap = 16 if count * Default_height + (count - 1) * 16 <= inner_height else 8
+        button_height = min(Default_height, (inner_height - (count - 1) * gap) // count)
         self.Card = Card(name=name, width=width, height=height, background_color=background_color, border_color=border_color, padding=padding, border_width=border_width)
         with self.Card:
-            for path, text in self.pages:
-                self.Buttons[path] = Button(lambda p=path: self.Go_to(p), name=text, width=button_width, font_size=font_size,
-                                            background_color=selected_color if path == current_path else button_color,
-                                            border_color=border_color)
+            with ui.column().style(f'gap: {Number_to_Pixel(gap)};'):
+                for path, text in self.pages:
+                    self.Buttons[path] = Button(lambda p=path: self.Go_to(p), name=text, width=button_width, height=button_height,
+                                                font_size=font_size,
+                                                background_color=selected_color if path == current_path else button_color,
+                                                border_color=border_color)
 
     def Go_to(self, path):
         ui.navigate.to(path)
@@ -1014,9 +1028,163 @@ class Checkbox:
         self._update_style()
 
 
+class File_Manager:
+    """Card for picking a file in a folder and loading / saving it.
 
+    Rows: folder path, file extensions, file dropdown (+ Refresh), filename for Save As,
+    then the Load / Save / Save As buttons and a status line.
 
+    load_function(path) and save_function(path) get a pathlib.Path and do the actual reading/writing.
+    - Load:    load_function(<folder>/<selected file>)
+    - Save:    save_function(<folder>/<selected file>)   (overwrites the selected file)
+    - Save As: save_function(<folder>/<filename box>)    (adds the first extension if the name has none)
 
+    Extensions are separated by commas, spaces or semicolons, with or without the dot ('csv, .txt').
+    Leave the box empty to list every file.
+
+        def Load(path): df = pd.read_csv(path)
+        def Save(path): df.to_csv(path, index=False)
+        FM = WGV.File_Manager(Load, Save, folder=os.getcwd(), extensions='.csv')
+    """
+    def __init__(self, load_function = None, save_function = None, name = 'Files', folder = None, extensions = '.csv', filename = '',
+                 width = 640, height = 410, label_width = 110, font_size = Default_font_size,
+                 background_color = Default_background_color, border_color = Default_border_color, padding = 20, border_width = 3):
+        self.load_function = load_function
+        self.save_function = save_function
+        self.Files = []
+
+        gap = 8
+        inner_width = width - 2 * (padding + border_width)
+        input_width = inner_width - label_width - gap
+        refresh_width = 100
+        select_width = input_width - refresh_width - gap
+        button_width = (inner_width - 2 * gap) // 3
+
+        self.Card = Card(name=name, width=width, height=height, padding=padding, border_width=border_width, border_color=border_color)
+        with self.Card:
+            with ui.row().classes('gap-2 items-center no-wrap'):
+                Create_Label_Right_Bold('Folder:', font_size=font_size, width=label_width)
+                self.Folder_input = Text_input(width=input_width, font_size=font_size, background_color=background_color, border_color=border_color,
+                                               default_text=str(folder if folder is not None else os.getcwd()))
+            with ui.row().classes('gap-2 items-center no-wrap'):
+                Create_Label_Right_Bold('Extensions:', font_size=font_size, width=label_width)
+                self.Extensions_input = Text_input(width=input_width, font_size=font_size, background_color=background_color, border_color=border_color,
+                                                   default_text=extensions)
+            with ui.row().classes('gap-2 items-center no-wrap'):
+                Create_Label_Right_Bold('File:', font_size=font_size, width=label_width)
+                self.File_select = Create_Dropdown_Card(function_to_call=self._File_selected, options=[], width=select_width, font_size=font_size,
+                                                        background_color=background_color, border_color=border_color)
+                self.Refresh_button = Button(self.Refresh, name='Refresh', width=refresh_width, font_size=font_size,
+                                             background_color=background_color, border_color=border_color)
+            with ui.row().classes('gap-2 items-center no-wrap'):
+                Create_Label_Right_Bold('Filename:', font_size=font_size, width=label_width)
+                self.Filename_input = Text_input(width=input_width, font_size=font_size, background_color=background_color, border_color=border_color,
+                                                 default_text=filename)
+            with ui.row().classes('gap-2 items-center no-wrap'):
+                self.Load_button = Button(self.Load, name='Load', width=button_width, font_size=font_size,
+                                          background_color=background_color, border_color=border_color)
+                self.Save_button = Button(self.Save, name='Save', width=button_width, font_size=font_size,
+                                          background_color=background_color, border_color=border_color)
+                self.Save_As_button = Button(self.Save_As, name='Save As', width=button_width, font_size=font_size,
+                                             background_color=background_color, border_color=border_color)
+            self.Status_label = ui.label('').style(f'color: {border_color}; font-size: {Number_to_Pixel(font_size - 2)}; width: {Number_to_Pixel(inner_width)};')
+
+        # Re-list the files whenever the folder or the extension list changes.
+        self.Folder_input.Text_input_element.on_value_change(lambda e: self.Refresh())
+        self.Extensions_input.Text_input_element.on_value_change(lambda e: self.Refresh())
+        self.Refresh()
+
+    # ---------- getters ----------
+    def Get_folder(self):
+        return Path(os.path.expanduser((self.Folder_input.Text_input_element.value or '').strip() or '.'))
+
+    def Get_extensions(self):
+        text = self.Extensions_input.Text_input_element.value or ''
+        parts = text.replace(',', ' ').replace(';', ' ').split()
+        return ['.' + p.lstrip('.').lower() for p in parts if p.lstrip('.')]
+
+    def Get_selected_path(self):
+        if not self.File_select.value:
+            return None
+        return self.Get_folder() / self.File_select.value
+
+    def Set_status(self, text, error = False):
+        self.Status_label.set_text(text)
+        self.Status_label.style(f'color: {Default_color if error else Default_border_color};')
+
+    # ---------- file list ----------
+    def Refresh(self):
+        folder = self.Get_folder()
+        if not folder.is_dir():
+            self.Files = []
+            self.File_select.set_options([], value=None)
+            self.Set_status(f'Folder not found: {folder}', error=True)
+            return
+        extensions = self.Get_extensions()
+        try:
+            self.Files = sorted((p.name for p in folder.iterdir()
+                                 if p.is_file() and (not extensions or p.suffix.lower() in extensions)), key=str.lower)
+        except OSError as e:
+            self.Files = []
+            self.File_select.set_options([], value=None)
+            self.Set_status(f'Cannot read folder: {e}', error=True)
+            return
+        current = self.File_select.value
+        self.File_select.set_options(self.Files, value=current if current in self.Files else (self.Files[0] if self.Files else None))
+        self.Set_status(f'{len(self.Files)} file(s) in {folder}')
+
+    def _File_selected(self, value):
+        # Copy the picked name into the Save As box, so "Save As" starts from it.
+        if value:
+            self.Filename_input.Text_input_element.value = value
+
+    # ---------- buttons ----------
+    def Load(self):
+        path = self.Get_selected_path()
+        if path is None:
+            self.Set_status('No file selected', error=True)
+            return
+        self._Call(self.load_function, path, 'Loaded')
+
+    def Save(self):
+        path = self.Get_selected_path()
+        if path is None:
+            self.Set_status('No file selected, use Save As', error=True)
+            return
+        self._Call(self.save_function, path, 'Saved')
+
+    def Save_As(self):
+        name = (self.Filename_input.Text_input_element.value or '').strip()
+        if not name:
+            self.Set_status('Enter a filename for Save As', error=True)
+            return
+        extensions = self.Get_extensions()
+        if not Path(name).suffix and extensions:
+            name += extensions[0]
+        folder = self.Get_folder()
+        if not folder.is_dir():
+            self.Set_status(f'Folder not found: {folder}', error=True)
+            return
+        path = folder / name
+        if self._Call(self.save_function, path, 'Saved'):
+            self.Refresh()
+            if path.name in self.Files:
+                self.File_select.set_value(path.name)
+            self.Set_status(f'Saved {path}')
+
+    def _Call(self, function, path, verb):
+        # verb is 'Loaded' or 'Saved', used in the status line.
+        action = 'Load' if verb == 'Loaded' else 'Save'
+        if function is None:
+            self.Set_status(f'No {action.lower()} function set', error=True)
+            return False
+        try:
+            function(path)
+        except Exception as e:
+            self.Set_status(f'{action} {path.name} failed: {e}', error=True)
+            return False
+        self.Set_status(f'{verb} {path}')
+        return True
 
 
 if __name__ in {"__main__", "__mp_main__"}: 

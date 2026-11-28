@@ -1,0 +1,681 @@
+================================================================================
+ DELTA COMMUNICATOR - SCPI COMMAND REFERENCE
+ Firmware version 0.1   (*IDN? -> PeterFox,Delta,001,0.1)
+================================================================================
+
+Contents
+  1. Connection
+  2. Command syntax
+  3. Parameter types
+  4. Responses and errors
+  5. Common commands          (*IDN?, *RST, *CLS)
+  6. SYSTem                   (error queue, LEDs)
+  7. I2C                      (I2C1, master or slave)
+  8. SPI                      (SPI1, master or slave, chip selects CS1..CS6)
+  9. USART1
+ 10. RS485                    (USART2 with RS485 line driver)
+ 11. CAN
+ 12. IO                       (IO_1..IO_8 general purpose pins)
+ 13. BUTTon                   (BUTTON1..BUTTON5)
+ 14. RTC                      (real-time clock, alarm)
+ 15. Default settings (power-up and *RST)
+ 16. Error numbers
+
+
+--------------------------------------------------------------------------------
+ 1. CONNECTION
+--------------------------------------------------------------------------------
+
+  Port:        USART3 (PB10 = TX, PB11 = RX)
+  Settings:    115200 baud, 8 data bits, no parity, 1 stop bit, no handshake
+  Terminator:  every command line must end with LF ("\n").
+               CR LF ("\r\n") also works, because CR counts as white space.
+               CR alone does NOT end a command.
+
+
+--------------------------------------------------------------------------------
+ 2. COMMAND SYNTAX
+--------------------------------------------------------------------------------
+
+  Long and short form
+    Command words are written in this file with the short form in upper case
+    and the rest in lower case, e.g. FREQuency. You can send either the short
+    form (FREQ) or the whole word (FREQUENCY). Nothing in between is accepted
+    (FREQU is wrong). Upper or lower case does not matter.
+
+  Command path
+    Words are joined with ':'. The leading ':' is optional:
+        :SYSTem:ERRor?   :SYST:ERR?   SYST:ERR?   syst:err?     (all the same)
+
+  Queries
+    A command ending in '?' is a query and sends one reply line.
+    Commands without '?' send nothing back.
+
+  Parameters
+    The first parameter follows the command after a space. More parameters
+    are separated by commas. Spaces around the commas are allowed:
+        :IO:MODE 5,OUTP       :IO:MODE 5 , OUTP
+    Every parameter listed for a command is required.
+
+  Several commands in one line
+    Up to 8 commands can be sent in one line, separated by ';'.
+    They are executed in order when the line ends:
+        :RS485:BAUD 9600;:RS485:PAR EVEN;:RS485:CONF?
+    After a ';' a command without the leading ':' is looked up relative to the
+    previous command's group first, so this also works:
+        :RS485:BAUD 9600;PAR EVEN;CONF?
+    If any command in the line has a syntax error, none of them is executed.
+
+  Length
+    One line must be shorter than 1024 characters.
+
+
+--------------------------------------------------------------------------------
+ 3. PARAMETER TYPES
+--------------------------------------------------------------------------------
+
+  <integer>   Whole number, decimal or hexadecimal with 0x prefix:
+                  80     0x50     115200
+              Note: a number starting with 0 (e.g. 010) is read as octal.
+              Exponents (1E6) and decimal points are not accepted.
+              At most 12 characters.
+
+  <choice>    One of a list of words, e.g. NORMal|LOOPback|SILent.
+              Long or short form, any case (LOOP, loopback, LOOPBACK).
+
+  <hex>       Binary data as a quoted string of hexadecimal digits, two per byte:
+                  "0A1BFF"    "0A 1B FF"    "0x0A,0x1B,0xFF"
+              Spaces, commas, ':' and '_' between bytes are ignored, and so is
+              a 0x prefix in front of a byte. An odd number of digits is an error.
+              The whole string can be at most 255 characters, so at most
+              127 bytes without separators.
+
+  <text>      Text as a quoted string, sent as bytes. Escapes:
+                  \n  line feed        \r  carriage return    \t  tab
+                  \0  zero byte        \\  backslash          \"  double quote
+                  \'  single quote     \xHH  any byte (two hex digits)
+              Example: "AT+RST\r\n"   "\x02DATA\x03"
+              Single quotes can be used instead of double quotes: 'hello'.
+              A quote character inside the string can also be written twice:
+              "say ""hi""". At most 255 characters.
+
+  <n>         Pin, button or chip-select number, written like an <integer>.
+
+
+--------------------------------------------------------------------------------
+ 4. RESPONSES AND ERRORS
+--------------------------------------------------------------------------------
+
+  Every reply is one line ending in LF.
+
+  Response formats used below:
+    <integer>       decimal number                       2580
+    <hexstring>     quoted hex, no separators           "0A1BFF"
+    <textstring>    quoted text, special bytes escaped  "OK\r\n"
+                    (\n \r \t \\ \" and \xHH for everything else that is
+                    not a printable ASCII character)
+
+  Errors
+    When a command fails it does nothing, and an error is added to the error
+    queue together with the RTC date and time it happened (see section 14). A query that fails sends NO reply, so after a reply timeout read
+    the error with :SYSTem:ERRor?.
+
+    The queue holds 16 errors. When it is full, the newest entry is replaced by
+    -350,"Queue overflow" and further errors are lost until you read some.
+
+    LED3 is the error LED: it is ON while the queue holds at least one error and
+    goes OFF when the last error has been read (or after *CLS).
+
+
+--------------------------------------------------------------------------------
+ 5. COMMON COMMANDS
+--------------------------------------------------------------------------------
+
+*IDN?
+    Identification.
+    Reply:     PeterFox,Delta,001,0.1
+               (manufacturer, model, serial number, firmware version)
+
+*RST
+    Resets every interface to its default settings (see section 14):
+    I2C, SPI and its chip selects, USART1, RS485, CAN (switched off, received
+    frames deleted), IO_1..IO_8 and the RTC alarm (switched off). The USART1/RS485
+    receive buffers are emptied. The error queue, the RTC time, date and
+    calibration are NOT changed.
+
+*CLS
+    Deletes all errors from the error queue. LED3 goes off.
+
+
+--------------------------------------------------------------------------------
+ 6. SYSTem
+--------------------------------------------------------------------------------
+
+:SYSTem:ERRor?
+    Reads the oldest error and deletes it from the queue.
+    Reply:     <number>,"<description>;<YYYY-MM-DD HH:MM:SS>"
+               e.g.  -113,"Undefined header;2026-11-25 14:05:09"
+               The time is when the error happened (RTC time, 1 s resolution).
+               It follows a ';' inside the quotes, as SCPI allows for
+               device-dependent information, so programs that only read
+               <number>,"<text>" still work.
+               0,"No error"                    when the queue is empty (no time)
+
+:SYSTem:ERRor:COUNt?
+    Number of errors waiting in the queue.
+    Reply:     <integer>, 0..16
+
+:SYSTem:Ld <led>,<state>
+    Sets one of the LEDs directly (an original test command).
+      <led>    1, 2 or 3       (LED1 = PB0, LED2 = PB1, LED3 = PB2)
+      <state>  0 = drive the pin high,  1 = drive the pin low
+    Other values are ignored without an error.
+    Note: LED1 also blinks as the heartbeat, LED2 flashes on received commands
+    and LED3 is the error LED, so their state is overwritten by the firmware.
+
+
+--------------------------------------------------------------------------------
+ 7. I2C   (I2C1: PB6 = SCL, PB7 = SDA)
+--------------------------------------------------------------------------------
+
+  The bus needs pull-up resistors on SDA and SCL. Addresses are 7-bit (0..0x7F).
+  Timeout per transfer: 100 ms.
+  The board is the bus MASTER by default. :I2C:ROLE SLAVe turns it into a slave
+  device (see the end of this section). SCAN?, WRITe, READ? and the REGister
+  commands work only in the MASTer role (error -221 otherwise).
+
+:I2C:FREQuency <hz>
+    Bus clock.
+      <hz>     <integer> 10000..400000. Above 100000 fast mode is used.
+    Default:   100000
+
+:I2C:SCAN?
+    Probes addresses 0x08..0x77 and lists the devices that answer.
+    Reply:     comma-separated hex addresses, e.g.  0x50,0x68
+               NONE   when no device answers
+    Error 101 "I2C bus busy, check pull-ups" if SDA or SCL is held low.
+
+:I2C:WRITe <address>,<data>
+    Writes bytes to a device.
+      <address>  <integer> 0..0x7F
+      <data>     <hex>, 1..127 bytes
+    Example:   :I2C:WRIT 0x50,"0010FF"
+
+:I2C:READ? <address>,<count>
+    Reads bytes from a device.
+      <address>  <integer> 0..0x7F
+      <count>    <integer> 1..128
+    Reply:     <hexstring>
+    Example:   :I2C:READ? 0x50,2        ->  "1A2B"
+
+:I2C:REGister:WRITe <address>,<register>,<data>
+    Writes bytes starting at a register (sends the 8-bit register address, then the data).
+      <address>   <integer> 0..0x7F
+      <register>  <integer> 0..0xFF
+      <data>      <hex>, 1..127 bytes
+    Example:   :I2C:REG:WRIT 0x68,0x6B,"00"
+
+:I2C:REGister:READ? <address>,<register>,<count>
+    Reads bytes starting at a register (write register address, repeated start, read).
+      <address>   <integer> 0..0x7F
+      <register>  <integer> 0..0xFF
+      <count>     <integer> 1..128
+    Reply:     <hexstring>
+    Example:   :I2C:REG:READ? 0x68,0x75,1   ->  "68"
+
+:I2C:CONFig?
+    Reply:     <hz>,<role>,<slave address>     e.g.  100000,MASTER,0x42
+
+:I2C:ROLE <role>
+      <role>   MASTer = the board starts the transfers (default)
+               SLAVe  = the board answers to its own address (:I2C:ADDRess)
+    Switching the role empties the slave receive buffer.
+
+:I2C:ROLE?
+    Reply:     MASTER | SLAVE
+
+:I2C:ADDRess <address>
+    Own 7-bit address in the SLAVe role.
+      <address>  <integer> 0x08..0x77
+    Default:   0x42
+
+:I2C:ADDRess?
+    Reply:     e.g.  0x42
+
+:I2C:SLAVe:REPLy <data>
+    The fixed reply in the SLAVe role. Every time a master reads from the
+    board, it gets these bytes from the first one on; if it reads more bytes
+    than the reply has, the extra bytes are 0xFF.
+      <data>   <hex>, 1..127 bytes
+    Default:   "FF"
+    Example:   :I2C:SLAV:REPL "0102A0"
+
+:I2C:SLAVe:REPLy?
+    Reply:     <hexstring>
+
+:I2C:SLAVe:READ?
+    All bytes masters have written to the board in the SLAVe role, oldest
+    first, and removes them from the buffer (511 bytes; error 102 when it
+    overflows). Separate write transfers are not marked.
+    Reply:     <hexstring>, ""  when nothing was received
+
+:I2C:SLAVe:COUNt?
+    Reply:     <integer>, bytes waiting in the slave receive buffer
+
+
+--------------------------------------------------------------------------------
+ 8. SPI   (SPI1: PA5 = SCK, PA6 = MISO, PA7 = MOSI)
+          chip selects SPI1_CS1..SPI1_CS6 = PD3, PD4, PD5, PD6, PD7, PD8
+--------------------------------------------------------------------------------
+
+  Timeout per transfer: 100 ms.
+  The board is the bus MASTER by default. :SPI:ROLE SLAVe turns it into a slave
+  device (see the end of this section). :SPI:TRANsfer? works only in the
+  MASTer role (error -221 otherwise).
+
+:SPI:FREQuency <hz>
+    Clock frequency. The fastest possible clock that is not higher than <hz>
+    is used: 28000000, 14000000, 7000000, 3500000, 1750000, 875000, 437500
+    or 218750 Hz (56 MHz / 2..256). Read the real value with :SPI:CONF?.
+      <hz>     <integer>, at least 218750
+    Default:   14000000
+
+:SPI:MODE <mode>
+    Clock polarity and phase.
+      <mode>   0 = CPOL 0, CPHA 0      1 = CPOL 0, CPHA 1
+               2 = CPOL 1, CPHA 0      3 = CPOL 1, CPHA 1
+    Default:   0
+
+:SPI:ORDer <order>
+    Bit order.
+      <order>  MSB | LSB    (MSB = most significant bit first)
+    Default:   MSB
+
+:SPI:TRANsfer? <cs>,<data>
+    Full-duplex transfer: sends <data> and returns the bytes received at the
+    same time. The selected chip select is active only during the transfer.
+      <cs>     <integer> 1..6 = SPI1_CS1..SPI1_CS6,  0 = no chip select
+      <data>   <hex>, 1..127 bytes
+    Reply:     <hexstring>, as many bytes as were sent
+    Example:   :SPI:TRAN? 2,"9F000000"   ->  "FFEF4018"
+
+:SPI:CS:POLarity <cs>,<level>
+    Active level of one chip select. The pin goes to its new inactive level
+    immediately.
+      <cs>     <integer> 1..6
+      <level>  LOW  = active low (pin low while selected)
+               HIGH = active high (pin high while selected)
+    Default:   LOW for all six
+
+:SPI:CS:POLarity? <cs>
+      <cs>     <integer> 1..6
+    Reply:     LOW | HIGH
+
+:SPI:CONFig?
+    Reply:     <hz>,<mode>,<order>,<role>   e.g.  14000000,0,MSB,MASTER
+
+:SPI:ROLE <role>
+      <role>   MASTer = the board drives SCK and MOSI (default)
+               SLAVe  = an external master drives SCK and MOSI, the board
+                        answers on MISO
+    In the SLAVe role the board is ALWAYS SELECTED: there is no slave select
+    input, every clock on SCK is taken as data. SCK and MOSI become inputs
+    (with weak pull resistors so they stay quiet when nothing is connected),
+    MISO becomes an output. :SPI:MODE and :SPI:ORDer still apply and must
+    match the external master; :SPI:FREQuency is kept for the MASTer role.
+    The chip selects CS1..CS6 stay deselected.
+    Switching the role empties the slave receive buffer.
+    The bytes are handled one at a time by interrupt, so use a slow master
+    clock (a few hundred kHz). If the master is too fast, bytes are lost and
+    error 202 is queued.
+
+:SPI:ROLE?
+    Reply:     MASTER | SLAVE
+
+:SPI:SLAVe:REPLy <data>
+    The fixed reply in the SLAVe role: these bytes are clocked out on MISO
+    one after the other, starting again with the first byte after the last
+    one. Because there is no slave select, the reply does not restart with
+    each transfer; it restarts at the first byte when you set it or switch
+    to the SLAVe role.
+      <data>   <hex>, 1..127 bytes
+    Default:   "FF"
+
+:SPI:SLAVe:REPLy?
+    Reply:     <hexstring>
+
+:SPI:SLAVe:READ?
+    All bytes the master clocked in on MOSI, oldest first, and removes them
+    from the buffer (511 bytes; error 202 when it overflows).
+    Reply:     <hexstring>, ""  when nothing was received
+
+:SPI:SLAVe:COUNt?
+    Reply:     <integer>, bytes waiting in the slave receive buffer
+
+
+--------------------------------------------------------------------------------
+ 9. USART1   (PA9 = TX, PA10 = RX)
+--------------------------------------------------------------------------------
+
+  Received bytes are stored in a buffer of 511 bytes until you read them. If the
+  buffer is full, further bytes are lost and error 302 is queued.
+
+:USART1:BAUD <baud>
+      <baud>   <integer> 300..3500000
+    Default:   115200
+
+:USART1:PARity <parity>
+      <parity> NONE | EVEN | ODD      (always 8 data bits)
+    Default:   NONE
+
+:USART1:STOP <bits>
+      <bits>   1 | 2
+    Default:   1
+
+:USART1:WRITe <text>
+    Sends the bytes of <text>. Returns when the last byte has been sent.
+      <text>   <text>, see section 3 for the escapes
+    Example:   :USART1:WRIT "AT\r\n"
+
+:USART1:READ?
+    Returns everything received so far and removes it from the buffer.
+    Reply:     <textstring>, ""  when nothing was received.
+               A long buffer can need more than one READ?.
+    Example:   :USART1:READ?   ->  "OK\r\n"
+
+:USART1:COUNt?
+    Reply:     <integer>, number of bytes waiting in the receive buffer
+
+:USART1:CLEar
+    Empties the receive buffer.
+
+:USART1:CONFig?
+    Reply:     <baud>,<parity>,<stop bits>     e.g.  115200,NONE,1
+
+
+--------------------------------------------------------------------------------
+ 10. RS485   (USART2: PA2 = TX, PA3 = RX, line driver: PA0 = DE, PA1 = /RE)
+--------------------------------------------------------------------------------
+
+  Works like USART1. While :RS485:WRITe sends, DE and /RE are high (driver on,
+  receiver off, so you do not receive your own data); otherwise both are low
+  (listening). Receive buffer: 511 bytes, overflow gives error 402.
+
+:RS485:BAUD <baud>
+      <baud>   <integer> 300..1750000
+    Default:   115200
+
+:RS485:PARity <parity>
+      <parity> NONE | EVEN | ODD      (always 8 data bits)
+    Default:   NONE
+
+:RS485:STOP <bits>
+      <bits>   1 | 2
+    Default:   1
+
+:RS485:WRITe <text>
+    Switches the driver on, sends the bytes of <text>, and switches it off again
+    after the last stop bit.
+      <text>   <text>
+    Example:   :RS485:WRIT "\x01\x03\x00\x00\x00\x01\x84\x0A"
+
+:RS485:READ?
+    Reply:     <textstring> with everything received so far (then removed)
+
+:RS485:COUNt?
+    Reply:     <integer>, bytes waiting in the receive buffer
+
+:RS485:CLEar
+    Empties the receive buffer.
+
+:RS485:CONFig?
+    Reply:     <baud>,<parity>,<stop bits>     e.g.  9600,EVEN,1
+
+
+--------------------------------------------------------------------------------
+ 11. CAN   (PD0 = RX, PD1 = TX)
+--------------------------------------------------------------------------------
+
+  CAN is OFF after power-up and *RST; switch it on with :CAN:ENAB ON.
+  All frames are received (no filter) into a 31-frame buffer; when it is full,
+  further frames are lost and error 503 is queued.
+  Frames are sent once (no automatic repeat). A frame that no other node
+  acknowledges gives error 502.
+
+:CAN:BITRate <bps>
+      <bps>    <integer> 10000..1000000. Only bit rates that divide the
+               28 MHz CAN clock evenly into 8..25 time quanta are possible,
+               e.g. 1000000, 500000, 250000, 125000, 100000, 50000, 20000,
+               10000. 800000 is NOT possible.
+    Default:   500000
+
+:CAN:MODE <mode>
+      <mode>   NORMal   = normal bus operation
+               LOOPback = frames you send are received internally, also
+                          without a bus (self test)
+               SILent   = listen only, never drives the bus
+    Default:   NORMal
+
+:CAN:ENABle <state>
+      <state>  ON | OFF  (also 1 | 0)
+    Default:   OFF
+
+:CAN:WRITe <id>,<data>
+    Sends one data frame. CAN must be ON.
+      <id>     <integer> 0..0x1FFFFFFF. 0..0x7FF is sent as a standard (11-bit)
+               frame, larger values as an extended (29-bit) frame.
+      <data>   <hex>, 0..8 bytes (""  for an empty frame)
+    Example:   :CAN:WRIT 0x123,"DEADBEEF"
+
+:CAN:READ?
+    Returns the oldest received frame and removes it.
+    Reply:     <type>,<id>,<data>
+                 <type>  STD (11-bit id) or EXT (29-bit id)
+                 <id>    hex, e.g. 0x123
+                 <data>  <hexstring>, or RTR for a remote frame
+               NONE   when no frame is waiting
+    Examples:  STD,0x123,"DEADBEEF"      EXT,0x1ABCDE,""      STD,0x7,RTR
+
+:CAN:COUNt?
+    Reply:     <integer>, frames waiting
+
+:CAN:CONFig?
+    Reply:     <bps>,<mode>,<ON|OFF>            e.g.  500000,NORMAL,OFF
+
+
+--------------------------------------------------------------------------------
+ 12. IO   (IO_1..IO_4 = PC0..PC3, IO_5..IO_8 = PE12..PE15)
+--------------------------------------------------------------------------------
+
+  Every pin can be a digital input or a digital output. IO_1..IO_4 can also be
+  analog inputs (ADC1 channels 10..13). Pin voltages must stay within 0..3.3 V.
+
+:IO:MODE <n>,<mode>
+      <n>      1..8
+      <mode>   INPut  = digital input
+               OUTPut = digital output (push-pull); it starts at the level last
+                        set with :IO:WRITe (0 by default)
+               ANALog = analog input, IO_1..IO_4 only
+    Default:   IO_1..IO_4 ANALog, IO_5..IO_8 INPut
+
+:IO:MODE? <n>
+    Reply:     INPUT | OUTPUT | ANALOG
+
+:IO:PULL <n>,<pull>
+    Internal pull resistor, used while the pin is in INPut mode (the setting is
+    kept and applied when the pin becomes an input later).
+      <n>      1..8
+      <pull>   NONE | UP | DOWN
+    Default:   NONE
+
+:IO:WRITe <n>,<level>
+    Sets an output. The pin must be in OUTPut mode.
+      <n>      1..8
+      <level>  0 | 1 | LOW | HIGH   (also OFF | ON)
+
+:IO:READ? <n>
+    Reads the pin level in INPut or OUTPut mode (not ANALog).
+    Reply:     0 | 1
+
+:IO:ANALog? <n>
+    Raw ADC value, average of 8 conversions. The pin must be in ANALog mode.
+      <n>      1..4
+    Reply:     <integer> 0..4095   (0 = 0 V, 4095 = 3.3 V)
+
+:IO:VOLTage? <n>
+    The same measurement in volts, assuming a 3.3 V reference.
+      <n>      1..4
+    Reply:     volts with 3 decimals, e.g.  1.464
+               3.300 means 3.3 V or more (the end of the range)
+
+
+--------------------------------------------------------------------------------
+ 13. BUTTon   (BUTTON1 = PD9, BUTTON2 = PD10, BUTTON3 = PD11, BUTTON4 = PD15,
+               BUTTON5 = PE8)
+--------------------------------------------------------------------------------
+
+  Both commands return the raw pin level. On this board the buttons read 1
+  when released (external pull-ups), so 0 most likely means pressed.
+
+:BUTTon:READ? <n>
+      <n>      1..5
+    Reply:     0 | 1
+
+:BUTTon:ALL?
+    Reply:     the five levels BUTTON1..BUTTON5, e.g.  1,1,0,1,1
+
+
+--------------------------------------------------------------------------------
+ 14. RTC   (real-time clock)
+--------------------------------------------------------------------------------
+
+  The clock runs from the 16 MHz crystal (HSE / 128), so it only counts while
+  the board is powered: after a power loss it starts again at
+  2000-01-01 00:00:00. Once the time or date has been set with :RTC:TIME or
+  :RTC:DATE, it keeps running over a reset (reset button, reflashing).
+  Years 2000..2099 are supported, leap years included.
+
+:RTC:TIME <hours>,<minutes>,<seconds>
+    Sets the time of day.
+      <hours>    <integer> 0..23
+      <minutes>  <integer> 0..59
+      <seconds>  <integer> 0..59
+    Example:   :RTC:TIME 14,5,9
+
+:RTC:TIME?
+    Reply:     HH:MM:SS                      e.g.  14:05:09
+
+:RTC:DATE <year>,<month>,<day>
+    Sets the date.
+      <year>     <integer> 2000..2099 (0..99 is read as 2000..2099)
+      <month>    <integer> 1..12
+      <day>      <integer> 1..28/29/30/31, checked against the month
+    Example:   :RTC:DATE 2026,11,25
+
+:RTC:DATE?
+    Reply:     YYYY-MM-DD                    e.g.  2026-11-25
+
+:RTC:NOW?
+    Date and time read at the same moment (no midnight mix-up as with two
+    separate queries).
+    Reply:     YYYY-MM-DD HH:MM:SS           e.g.  2026-11-25 14:05:09
+
+    To set both at once, send them in one line:
+               :RTC:DATE 2026,11,25;:RTC:TIME 14,5,9
+
+:RTC:CALibration <value>
+    Corrects a clock that runs fast: each step removes 1 of every 2^20 clock
+    pulses, slowing the clock by about 0.954 ppm (0.082 s per day).
+    The clock can only be slowed down, not sped up.
+      <value>    <integer> 0..127      (127 = about 121 ppm, 10.5 s per day)
+    Default:   0. The value is kept over a reset.
+
+:RTC:CALibration?
+    Reply:     <integer> 0..127
+
+:RTC:ALARm:TIME <hours>,<minutes>,<seconds>
+    Time of day of the alarm. The alarm repeats every day while it is enabled.
+      same ranges as :RTC:TIME
+    Default:   00:00:00
+
+:RTC:ALARm:TIME?
+    Reply:     HH:MM:SS
+
+:RTC:ALARm:ENABle <state>
+      <state>    ON | OFF  (also 1 | 0)
+    Default:   OFF (also after *RST and after a reset)
+
+:RTC:ALARm:ENABle?
+    Reply:     ON | OFF
+
+:RTC:ALARm:TRIGgered?
+    Reply:     1 if the alarm time was reached since the last TRIGgered? query
+               (or since it was enabled), otherwise 0. Reading clears it.
+
+
+--------------------------------------------------------------------------------
+ 15. DEFAULT SETTINGS   (after power-up and after *RST)
+--------------------------------------------------------------------------------
+
+  I2C       MASTer role, 100000 Hz, slave address 0x42, slave reply "FF"
+  SPI       MASTer role, 14000000 Hz, mode 0, MSB first; CS1..CS6 active low,
+            all deselected; slave reply "FF"
+  USART1    115200 baud, no parity, 1 stop bit, receive buffer empty
+  RS485     115200 baud, no parity, 1 stop bit, driver off, receive buffer empty
+  CAN       500000 bit/s, NORMal mode, OFF, receive buffer empty
+  IO        IO_1..IO_4 ANALog, IO_5..IO_8 INPut, no pull, output level 0
+  RTC       alarm OFF, alarm time 00:00:00 (time, date and calibration
+            are not changed by *RST)
+  Errors    queue empty at power-up (*RST does not clear it; use *CLS)
+
+
+--------------------------------------------------------------------------------
+ 16. ERROR NUMBERS   (as returned by :SYSTem:ERRor?)
+--------------------------------------------------------------------------------
+
+  The description text shown by :SYST:ERR? can be more specific than the
+  general meaning listed here, and ends with the time of the error,
+  e.g. -222,"I2C address 0..0x7F;2026-11-25 14:05:09".
+
+  Standard SCPI errors
+     0    No error                 the queue is empty
+  -100    Command error            more than 8 commands in one line
+  -102    Syntax error             line starts with a character that cannot
+                                   start a command
+  -103    Invalid separator        unexpected character after a command
+  -104    Data type error          parameter has the wrong form
+  -108    Parameter not allowed    a parameter was sent to a command that
+                                   takes none, or too many parameters
+  -109    Missing parameter        fewer parameters than the command needs
+  -113    Undefined header         unknown command, or an incomplete one
+                                   such as :SYST alone
+  -150    String data error        missing quotes, bad escape sequence,
+                                   bad hex data
+  -221    Settings conflict        command not possible in the current state
+                                   (CAN off, pin in the wrong mode)
+  -222    Data out of range        number outside the allowed range
+  -224    Illegal parameter value  word not in the list of choices, or a
+                                   number that is not an integer
+  -350    Queue overflow           more than 16 errors; some were lost
+  -363    Input buffer overrun     command line too long (1024 characters or
+                                   more), or commands sent faster than the
+                                   device could take them
+
+  Device-specific errors
+   101    I2C error                no ACK, bus busy, bus error, arbitration
+                                   lost or timeout
+   102    I2C slave error          bus error, receive buffer overflow or
+                                   slave start failed (SLAVe role)
+   201    SPI error                transfer failed
+   202    SPI slave error          master too fast (overrun) or receive buffer
+                                   overflow (SLAVe role)
+   301    USART1 error             transmit or configuration failed
+   302    USART1 overflow          receive buffer full, data lost
+   401    RS485 error              transmit or configuration failed
+   402    RS485 overflow           receive buffer full, data lost
+   501    CAN error                configuration or start failed
+   502    CAN transmit error       no free mailbox, timeout, or frame not
+                                   acknowledged
+   503    CAN overflow             receive buffer full, frames lost
+   601    ADC error                calibration or conversion failed
+   701    RTC error                reading or setting the clock failed
